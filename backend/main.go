@@ -11,7 +11,6 @@ import (
 
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/reflection"
@@ -50,20 +49,21 @@ func main() {
 
 	// Try to connect to backend, but don't fail if it's not available yet
 	// The HTTP server will start anyway and return appropriate errors
-	log.Printf("Attempting to connect to gRPC backend at %s (TLS: %v)...", cfg.BackendAddr, cfg.UseTLS)
-	log.Printf("DEBUG: GRPS_BACKEND_USE_TLS env var = %q", os.Getenv("GRPS_BACKEND_USE_TLS"))
-	log.Printf("DEBUG: Parsed UseTLS = %v", cfg.UseTLS)
+	// TLS IS FORCED TO FALSE - always using plaintext
+	log.Printf("Attempting to connect to gRPC backend at %s (TLS: FALSE - FORCED)", cfg.BackendAddr)
+	log.Printf("DEBUG: GRPS_BACKEND_USE_TLS env var = %q (ignored, TLS forced to false)", os.Getenv("GRPS_BACKEND_USE_TLS"))
+	log.Printf("DEBUG: UseTLS = %v (FORCED TO FALSE)", cfg.UseTLS)
 	conn, err := dialBackend(context.Background(), cfg)
 	if err != nil {
 		log.Printf("WARNING: Failed to connect to gRPC backend at %s: %v", cfg.BackendAddr, err)
 		log.Printf("The HTTP server will start anyway. Configure the correct backend address in Settings and restart.")
-		log.Printf("Make sure:\n1. The gRPC backend is running\n2. GRPS_BACKEND_ADDR is correct\n3. GRPS_BACKEND_USE_TLS matches the backend's TLS configuration")
-		// If it's a TLS error, provide more specific guidance
+		log.Printf("Make sure:\n1. The gRPC backend is running\n2. GRPS_BACKEND_ADDR is correct (currently: %s)", cfg.BackendAddr)
+		log.Printf("NOTE: TLS is FORCED TO FALSE - always using plaintext connections")
+		// If it's a TLS error, this shouldn't happen but provide guidance
 		if strings.Contains(err.Error(), "tls") || strings.Contains(err.Error(), "TLS") {
-			log.Printf("TLS ERROR DETAILS: The error suggests a TLS mismatch.")
-			log.Printf("  Current GRPS_BACKEND_USE_TLS setting: %v", cfg.UseTLS)
-			log.Printf("  If your gRPC server uses -plaintext (no TLS), ensure GRPS_BACKEND_USE_TLS is set to false")
-			log.Printf("  If your gRPC server uses TLS, ensure GRPS_BACKEND_USE_TLS is set to true")
+			log.Printf("TLS ERROR DETECTED (this shouldn't happen - TLS is forced to false):")
+			log.Printf("  This may indicate a stale connection. Try fully restarting the ServiceLens app.")
+			log.Printf("  Error: %v", err)
 		}
 	} else {
 		log.Printf("Successfully connected to gRPC backend at %s", cfg.BackendAddr)
@@ -118,7 +118,7 @@ func loadConfig() Config {
 	// FORCE TLS TO FALSE - always use insecure (plaintext) connections
 	// This matches grpcurl -plaintext behavior
 	useTLS := false
-	
+
 	cfg := Config{
 		BackendAddr:  envOr("GRPS_BACKEND_ADDR", "localhost:9090"), // Console gRPC server (where inspector backend connects TO)
 		HTTPAddr:     envOr("GRPS_HTTP_ADDR", ":8081"),             // Inspector backend HTTP server (where UI connects)

@@ -72,7 +72,9 @@ func (s *Server) invokeHandler(w http.ResponseWriter, r *http.Request) {
 		// Provide helpful error messages for common issues
 		errMsg := err.Error()
 		if strings.Contains(errMsg, "tls: first record does not look like a TLS handshake") {
-			errMsg = "TLS mismatch: The backend is configured with TLS but the target server is not using TLS (or vice versa). Please check GRPS_BACKEND_USE_TLS in Settings and ensure it matches your gRPC backend's TLS configuration."
+			// This error shouldn't happen since TLS is forced to false, but if it does,
+			// it means there's a stale connection or the backend wasn't restarted properly
+			errMsg = "Connection error: The gRPC connection may be using a stale TLS configuration. Please restart the ServiceLens backend completely (close and reopen the app) to ensure all connections are reset. TLS is forced to false, so this error suggests a cached connection."
 		} else if strings.Contains(errMsg, "connection refused") {
 			errMsg = "Connection refused: The gRPC backend is not running or the address is incorrect. Please check GRPS_BACKEND_ADDR in Settings."
 		} else if strings.Contains(errMsg, "no such host") {
