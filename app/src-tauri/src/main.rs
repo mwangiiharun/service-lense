@@ -90,16 +90,33 @@ impl BackendProcess {
                 return Err("Unsupported target OS".into());
             };
             
-            // Look for binary in resources/binaries directory
-            let resource_dir = app.path().resource_dir()?;
-            let backend_bin = resource_dir.join("binaries").join(&binary_name);
+            // Look for binary using Tauri's sidecar API (for externalBin)
+            // Tauri automatically appends the target triple to externalBin entries
+            let backend_bin = app
+                .path()
+                .resource_dir()?
+                .join("binaries")
+                .join(&binary_name);
             
             // Debug: log the paths we're checking
             eprintln!("Looking for backend binary:");
-            eprintln!("  Resource dir: {:?}", resource_dir);
             eprintln!("  Binary name: {}", binary_name);
             eprintln!("  Full path: {:?}", backend_bin);
             eprintln!("  Exists: {}", backend_bin.exists());
+            
+            // Also try the sidecar path (Tauri's externalBin location)
+            let resource_dir = app.path().resource_dir()?;
+            eprintln!("  Resource dir: {:?}", resource_dir);
+            
+            // List contents of resource directory
+            if resource_dir.exists() {
+                eprintln!("  Resource directory exists, contents:");
+                if let Ok(entries) = std::fs::read_dir(&resource_dir) {
+                    for entry in entries.flatten() {
+                        eprintln!("    - {:?}", entry.path());
+                    }
+                }
+            }
             
             // List contents of binaries directory if it exists
             let binaries_dir = resource_dir.join("binaries");
