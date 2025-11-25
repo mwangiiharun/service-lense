@@ -1,0 +1,36 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "ServiceLens",
+  "version": "0.2.0",
+  "identifier": "com.servicelens.app",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build:backend && npm run build",
+    "devUrl": "http://localhost:5173",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "ServiceLens",
+        "width": 1200,
+        "height": 800,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["dmg", "msi", "nsis"],
+    "resources": [
+      "binaries/backend-x86_64-apple-darwin",
+      "binaries/backend-aarch64-apple-darwin",
+      "binaries/backend-x86_64-pc-windows-msvc.exe",
+      "binaries/backend-aarch64-pc-windows-msvc.exe"
+    ]
+  }
+}

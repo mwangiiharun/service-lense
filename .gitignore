@@ -1,0 +1,62 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build outputs
+dist/
+build/
+target/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Backend binary
+backend/backend
+backend/backend-*
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Tauri
+app/src-tauri/target/
+app/src-tauri/Cargo.lock
+
+# Backend binaries (will be built during CI/CD)
+app/src-tauri/binaries/
+
+# Icon generation files (temporary scripts and intermediate files)
+icon-temp.png
+create-icon.js
+generate-icons.js
+icon.svg
+icon.png
+
+# Local storage/test data
+*.db
+*.sqlite
+
+# Coverage
+coverage/
+.nyc_output/
+

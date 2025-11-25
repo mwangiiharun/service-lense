@@ -1,0 +1,164 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  get-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get-version.outputs.version }}
+    steps:
+      - name: Get version
+        id: get-version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION=${GITHUB_REF#refs/tags/}
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+  build-macos:
+    needs: get-version
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json
+      
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Install dependencies (macOS)
+        run: |
+          brew install go
+          cd app && npm ci
+      
+      - name: Build Go backend
+        run: |
+          mkdir -p app/src-tauri/binaries
+          cd backend
+          export GOOS=darwin
+          export GOARCH=amd64
+          go build -o ../app/src-tauri/binaries/backend-x86_64-apple-darwin .
+          export GOARCH=arm64
+          go build -o ../app/src-tauri/binaries/backend-aarch64-apple-darwin .
+          chmod +x ../app/src-tauri/binaries/backend-*
+      
+      - name: Build Tauri app (macOS)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: app
+          args: --bundles dmg
+      
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg
+          path: app/src-tauri/target/release/bundle/dmg/*.dmg
+          retention-days: 30
+
+  build-windows:
+    needs: get-version
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json
+      
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+      
+      - name: Install dependencies (Windows)
+        run: cd app && npm ci
+      
+      - name: Build Go backend
+        run: |
+          New-Item -ItemType Directory -Force -Path app/src-tauri/binaries | Out-Null
+          cd backend
+          $env:GOOS="windows"
+          $env:GOARCH="amd64"
+          go build -o ../app/src-tauri/binaries/backend-x86_64-pc-windows-msvc.exe .
+          $env:GOARCH="arm64"
+          go build -o ../app/src-tauri/binaries/backend-aarch64-pc-windows-msvc.exe .
+      
+      - name: Build Tauri app (Windows)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: app
+          args: --bundles nsis
+      
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: app/src-tauri/target/release/bundle/nsis/*.exe
+          retention-days: 30
+
+  publish-release:
+    needs: [get-version, build-macos, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-dmg
+          path: ./artifacts/macos
+      
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-installer
+          path: ./artifacts/windows
+      
+      - name: Publish Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.get-version.outputs.version }}
+          name: ServiceLens ${{ needs.get-version.outputs.version }}
+          body: |
+            ## ServiceLens ${{ needs.get-version.outputs.version }}
+            
+            ### Downloads
+            - **macOS**: DMG installer (Intel & Apple Silicon)
+            - **Windows**: NSIS installer (.exe)
+            
+            See the assets below to download and install this version.
+          files: |
+            ./artifacts/macos/*.dmg
+            ./artifacts/windows/*.exe
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
