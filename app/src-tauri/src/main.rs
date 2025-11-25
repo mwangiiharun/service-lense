@@ -90,6 +90,7 @@ impl BackendProcess {
                 return Err("Unsupported target OS".into());
             };
             
+            // Look for binary in resources/binaries directory
             let backend_bin = app
                 .path()
                 .resource_dir()?

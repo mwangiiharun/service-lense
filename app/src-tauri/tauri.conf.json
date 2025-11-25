@@ -26,11 +26,6 @@
   "bundle": {
     "active": true,
     "targets": ["dmg", "msi", "nsis"],
-    "resources": [
-      "binaries/backend-x86_64-apple-darwin",
-      "binaries/backend-aarch64-apple-darwin",
-      "binaries/backend-x86_64-pc-windows-msvc.exe",
-      "binaries/backend-aarch64-pc-windows-msvc.exe"
-    ]
+    "resources": []
   }
 }
