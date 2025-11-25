@@ -90,13 +90,6 @@ impl BackendProcess {
             std::thread::sleep(std::time::Duration::from_millis(300));
         }
         
-        // Also kill any process on the default port (8081) if different from configured port
-        if config.http_addr != ":8081" {
-            if let Some(port) = extract_port(":8081") {
-                kill_process_on_port(port);
-            }
-        }
-        
         if cfg!(debug_assertions) {
             // Development: run `go run` from the backend directory located at repo_root/backend.
             let backend_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
