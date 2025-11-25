@@ -26,6 +26,6 @@
   "bundle": {
     "active": true,
     "targets": ["dmg", "msi", "nsis"],
-    "resources": []
+    "resources": ["binaries/**"]
   }
 }
