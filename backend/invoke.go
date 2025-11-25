@@ -139,18 +139,23 @@ func (s *Server) invokeUnary(ctx context.Context, fullMethod string, payload map
 
 	respMsg := dynamic.NewMessage(methodDesc.GetOutputType())
 
+	// ALWAYS ensure connection is fresh before invoking
+	// This prevents any possibility of using a stale TLS connection
+	if err := s.ensureConnection(ctx); err != nil {
+		log.Printf("ERROR: Failed to ensure connection before invoke: %v", err)
+		return nil, nil, nil, fmt.Errorf("connection error: %w", err)
+	}
+	
 	var headerMD metadata.MD
 	var trailerMD metadata.MD
 	
-	// Before invoking, double-check connection is using insecure transport
-	// Reset connection if we get TLS errors
 	state := s.backendConn.GetState()
 	log.Printf("Invoking %s on connection (state: %s)", fullMethod, state.String())
 	
 	if err := s.backendConn.Invoke(ctx, fullMethod, reqMsg, respMsg, grpc.Header(&headerMD), grpc.Trailer(&trailerMD)); err != nil {
-		// If we get a TLS error, the connection is definitely wrong - reset it
+		// If we get a TLS error, the connection is definitely wrong - reset it immediately
 		if strings.Contains(err.Error(), "tls:") || strings.Contains(err.Error(), "TLS") {
-			log.Printf("TLS error during invoke - connection is corrupted, will be reset on next call")
+			log.Printf("TLS error during invoke - connection is corrupted, resetting immediately")
 			s.resetConnection()
 		}
 		return nil, headerMD, trailerMD, err

@@ -154,7 +154,8 @@ func dialBackend(ctx context.Context, cfg Config) (*grpc.ClientConn, error) {
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(creds),
 		grpc.WithBlock(), // Ensure connection is established
-		grpc.WithDisableRetry(), // Disable retries to prevent connection reuse
+		grpc.WithDisableServiceConfig(), // Disable service config to prevent connection reuse
+		grpc.WithDisableRetry(), // Disable retries
 	}
 	
 	// DO NOT set ServerName or Authority - these can cause TLS issues
