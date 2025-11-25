@@ -72,6 +72,10 @@ type InspectorDescriptor struct {
 }
 
 func (s *Server) capabilitiesHandler(w http.ResponseWriter, r *http.Request) {
+	if s.backendConn == nil {
+		http.Error(w, "Backend not connected. Please configure GRPS_BACKEND_ADDR in Settings and restart the backend.", http.StatusServiceUnavailable)
+		return
+	}
 	// Recover from panics to prevent server crashes
 	defer func() {
 		if r := recover(); r != nil {

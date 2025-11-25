@@ -40,6 +40,10 @@ type InvokeError struct {
 
 // invokeHandler executes dynamic unary RPCs against the connected backend.
 func (s *Server) invokeHandler(w http.ResponseWriter, r *http.Request) {
+	if s.backendConn == nil {
+		http.Error(w, "Backend not connected. Please configure GRPS_BACKEND_ADDR in Settings and restart the backend.", http.StatusServiceUnavailable)
+		return
+	}
     var in InvokeRequest
     if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
         http.Error(w, "invalid json: "+err.Error(), http.StatusBadRequest)

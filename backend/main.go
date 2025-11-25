@@ -31,7 +31,7 @@ type Config struct {
 type Server struct {
 	cfg         Config
     grpcServer  *grpc.Server
-    backendConn *grpc.ClientConn
+    backendConn *grpc.ClientConn // nil if backend is not connected
     traffic     *trafficBuffer
 }
 
@@ -42,18 +42,24 @@ func main() {
 		log.Fatalf("GRPS_BACKEND_ADDR must be configured (set via environment variable or UI settings)")
 	}
 
-	log.Printf("Attempting to connect to gRPC backend at %s (TLS: %v)...", cfg.BackendAddr, cfg.UseTLS)
-	conn, err := dialBackend(context.Background(), cfg)
-    if err != nil {
-        log.Fatalf("Failed to dial gRPC backend at %s: %v\n\nMake sure:\n1. The gRPC backend is running\n2. GRPS_BACKEND_ADDR is correct\n3. GRPS_BACKEND_USE_TLS matches the backend's TLS configuration", cfg.BackendAddr, err)
-    }
-	log.Printf("Successfully connected to gRPC backend at %s", cfg.BackendAddr)
-
     srv := &Server{
 		cfg:         cfg,
         traffic:     newTrafficBuffer(500),
-		backendConn: conn,
+		backendConn: nil, // Will be connected lazily or on startup
     }
+
+	// Try to connect to backend, but don't fail if it's not available yet
+	// The HTTP server will start anyway and return appropriate errors
+	log.Printf("Attempting to connect to gRPC backend at %s (TLS: %v)...", cfg.BackendAddr, cfg.UseTLS)
+	conn, err := dialBackend(context.Background(), cfg)
+    if err != nil {
+        log.Printf("WARNING: Failed to connect to gRPC backend at %s: %v", cfg.BackendAddr, err)
+		log.Printf("The HTTP server will start anyway. Configure the correct backend address in Settings and restart.")
+		log.Printf("Make sure:\n1. The gRPC backend is running\n2. GRPS_BACKEND_ADDR is correct\n3. GRPS_BACKEND_USE_TLS matches the backend's TLS configuration")
+    } else {
+		log.Printf("Successfully connected to gRPC backend at %s", cfg.BackendAddr)
+		srv.backendConn = conn
+	}
 
 	srv.grpcServer = grpc.NewServer(grpc.ChainUnaryInterceptor(srv.loggingUnaryInterceptor))
     reflection.Register(srv.grpcServer)

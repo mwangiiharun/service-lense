@@ -79,6 +79,10 @@ func collectMethods(ctx context.Context, cc *grpc.ClientConn, baseMD metadata.MD
 }
 
 func (s *Server) schemaHandler(w http.ResponseWriter, r *http.Request) {
+	if s.backendConn == nil {
+		http.Error(w, "Backend not connected. Please configure GRPS_BACKEND_ADDR in Settings and restart the backend.", http.StatusServiceUnavailable)
+		return
+	}
 	ctx := r.Context()
 
 	methods, err := collectMethods(ctx, s.backendConn, s.cfg.DefaultMD)
