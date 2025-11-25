@@ -59,6 +59,7 @@ jobs:
           export GOARCH=amd64
           go build -o ../app/src-tauri/binaries/backend-x86_64-apple-darwin .
           chmod +x ../app/src-tauri/binaries/backend-x86_64-apple-darwin
+          ls -la ../app/src-tauri/binaries/
       
       - name: Build Tauri app (macOS Intel)
         uses: tauri-apps/tauri-action@v0
@@ -106,6 +107,7 @@ jobs:
           export GOARCH=arm64
           go build -o ../app/src-tauri/binaries/backend-aarch64-apple-darwin .
           chmod +x ../app/src-tauri/binaries/backend-aarch64-apple-darwin
+          ls -la ../app/src-tauri/binaries/
       
       - name: Build Tauri app (macOS Silicon)
         uses: tauri-apps/tauri-action@v0
