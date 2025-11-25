@@ -29,8 +29,8 @@ impl BackendProcess {
     fn start(&mut self, app: &tauri::AppHandle, config: Option<BackendConfig>) -> Result<(), Box<dyn std::error::Error>> {
         self.config = config.clone();
         let config = config.unwrap_or_else(|| BackendConfig {
-            backend_addr: "localhost:9090".to_string(),
-            http_addr: ":9000".to_string(),  // ServiceLens proxy port (90XX range)
+            backend_addr: "localhost:8081".to_string(),  // Target gRPC backend to inspect
+            http_addr: ":9000".to_string(),  // ServiceLens proxy port (90XX range) - where frontend connects
             use_tls: false,
             allow_origins: "http://localhost:5173".to_string(),
         });

@@ -77,10 +77,10 @@ export type EnvSettings = {
 };
 
 const defaultEnvSettings: EnvSettings = {
-  backendAddr: "localhost:9090",
+  backendAddr: "localhost:8081",  // Target gRPC backend to inspect (user's backend)
   allowOrigins: "http://localhost:5173",
   useTLS: false,
-  httpAddr: ":9000"  // ServiceLens proxy port (90XX range)
+  httpAddr: ":9000"  // ServiceLens proxy port (90XX range) - where frontend connects
 };
 
 export function loadEnvSettings(): EnvSettings {
