@@ -152,6 +152,48 @@ func dialBackend(ctx context.Context, cfg Config) (*grpc.ClientConn, error) {
 	return grpc.DialContext(ctx, cfg.BackendAddr, opts...)
 }
 
+// resetConnection closes and clears the backend connection
+func (s *Server) resetConnection() {
+	if s.backendConn != nil {
+		log.Printf("Closing existing backend connection...")
+		if err := s.backendConn.Close(); err != nil {
+			log.Printf("Error closing backend connection: %v", err)
+		}
+		s.backendConn = nil
+		log.Printf("Backend connection reset")
+	}
+}
+
+// ensureConnection ensures the backend connection exists and is healthy
+// If the connection is nil or in a bad state, it recreates it
+func (s *Server) ensureConnection(ctx context.Context) error {
+	if s.backendConn == nil {
+		log.Printf("Backend connection is nil, creating new connection...")
+		conn, err := dialBackend(ctx, s.cfg)
+		if err != nil {
+			return err
+		}
+		s.backendConn = conn
+		log.Printf("New backend connection created")
+		return nil
+	}
+	
+	// Check connection state
+	state := s.backendConn.GetState()
+	if state.String() == "TRANSIENT_FAILURE" || state.String() == "SHUTDOWN" || state.String() == "CONNECTING" {
+		log.Printf("Backend connection is in bad state (%s), resetting and recreating...", state.String())
+		s.resetConnection()
+		conn, err := dialBackend(ctx, s.cfg)
+		if err != nil {
+			return err
+		}
+		s.backendConn = conn
+		log.Printf("Backend connection recreated")
+	}
+	
+	return nil
+}
+
 func (s *Server) allowOrigin(origin string) bool {
 	if len(s.cfg.AllowOrigin) == 0 {
 		return true
