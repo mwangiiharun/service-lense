@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -73,9 +74,26 @@ func (s *Server) invokeHandler(w http.ResponseWriter, r *http.Request) {
 		// Provide helpful error messages for common issues
 		errMsg := err.Error()
 		if strings.Contains(errMsg, "tls: first record does not look like a TLS handshake") {
-			// This error shouldn't happen since TLS is forced to false, but if it does,
-			// it means there's a stale connection or the backend wasn't restarted properly
-			errMsg = "Connection error: The gRPC connection may be using a stale TLS configuration. Please restart the ServiceLens backend completely (close and reopen the app) to ensure all connections are reset. TLS is forced to false, so this error suggests a cached connection."
+			// This error shouldn't happen since TLS is forced to false
+			// Force connection reset and retry once
+			log.Printf("TLS error detected, resetting connection and retrying...")
+			s.resetConnection()
+			if err := s.ensureConnection(ctx); err != nil {
+				errMsg = fmt.Sprintf("Connection error after reset: %v. The gRPC backend at %s may not be running or is using TLS. Please check GRPS_BACKEND_ADDR and ensure your gRPC server is running without TLS.", err, s.cfg.BackendAddr)
+			} else {
+				// Retry the invocation with fresh connection
+				result, headers, trailers, retryErr := s.invokeUnary(ctx, normalizedMethod, in.Payload)
+				if retryErr == nil {
+					// Success after retry - return the result
+					writeJSON(w, http.StatusOK, InvokeResponse{
+						Response: result,
+						Headers:  metadataToMap(headers),
+						Trailers: metadataToMap(trailers),
+					})
+					return
+				}
+				errMsg = fmt.Sprintf("Connection reset but retry failed: %v", retryErr)
+			}
 		} else if strings.Contains(errMsg, "connection refused") {
 			errMsg = "Connection refused: The gRPC backend is not running or the address is incorrect. Please check GRPS_BACKEND_ADDR in Settings."
 		} else if strings.Contains(errMsg, "no such host") {
