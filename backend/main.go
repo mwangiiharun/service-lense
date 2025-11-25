@@ -176,32 +176,23 @@ func (s *Server) resetConnection() {
 }
 
 // ensureConnection ensures the backend connection exists and is healthy
-// If the connection is nil or in a bad state, it recreates it
+// ALWAYS resets and recreates connection to prevent stale TLS connections
 func (s *Server) ensureConnection(ctx context.Context) error {
-	if s.backendConn == nil {
-		log.Printf("Backend connection is nil, creating new connection...")
-		conn, err := dialBackend(ctx, s.cfg)
-		if err != nil {
-			return err
-		}
-		s.backendConn = conn
-		log.Printf("New backend connection created")
-		return nil
-	}
-
-	// Check connection state
-	state := s.backendConn.GetState()
-	if state.String() == "TRANSIENT_FAILURE" || state.String() == "SHUTDOWN" || state.String() == "CONNECTING" {
-		log.Printf("Backend connection is in bad state (%s), resetting and recreating...", state.String())
+	// Always reset existing connection to ensure it's fresh with TLS=false
+	if s.backendConn != nil {
+		state := s.backendConn.GetState()
+		log.Printf("Resetting existing connection (state: %s) to ensure fresh TLS=false connection...", state.String())
 		s.resetConnection()
-		conn, err := dialBackend(ctx, s.cfg)
-		if err != nil {
-			return err
-		}
-		s.backendConn = conn
-		log.Printf("Backend connection recreated")
 	}
-
+	
+	log.Printf("Creating fresh backend connection (TLS forced to false)...")
+	conn, err := dialBackend(ctx, s.cfg)
+	if err != nil {
+		log.Printf("ERROR: Failed to create backend connection: %v", err)
+		return err
+	}
+	s.backendConn = conn
+	log.Printf("Fresh backend connection created successfully (TLS=false)")
 	return nil
 }
 
