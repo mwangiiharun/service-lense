@@ -90,6 +90,12 @@ impl BackendProcess {
             std::thread::sleep(std::time::Duration::from_millis(300));
         }
         
+        // Also kill any process on the gRPC server port (50052) to avoid conflicts
+        // This is non-critical but helps prevent "address already in use" errors
+        eprintln!("Checking for processes on port 50052 (gRPC server)...");
+        kill_process_on_port(50052);
+        std::thread::sleep(std::time::Duration::from_millis(200));
+        
         if cfg!(debug_assertions) {
             // Development: run `go run` from the backend directory located at repo_root/backend.
             let backend_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
