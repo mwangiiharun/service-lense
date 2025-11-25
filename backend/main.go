@@ -51,11 +51,20 @@ func main() {
 	// Try to connect to backend, but don't fail if it's not available yet
 	// The HTTP server will start anyway and return appropriate errors
 	log.Printf("Attempting to connect to gRPC backend at %s (TLS: %v)...", cfg.BackendAddr, cfg.UseTLS)
+	log.Printf("DEBUG: GRPS_BACKEND_USE_TLS env var = %q", os.Getenv("GRPS_BACKEND_USE_TLS"))
+	log.Printf("DEBUG: Parsed UseTLS = %v", cfg.UseTLS)
 	conn, err := dialBackend(context.Background(), cfg)
 	if err != nil {
 		log.Printf("WARNING: Failed to connect to gRPC backend at %s: %v", cfg.BackendAddr, err)
 		log.Printf("The HTTP server will start anyway. Configure the correct backend address in Settings and restart.")
 		log.Printf("Make sure:\n1. The gRPC backend is running\n2. GRPS_BACKEND_ADDR is correct\n3. GRPS_BACKEND_USE_TLS matches the backend's TLS configuration")
+		// If it's a TLS error, provide more specific guidance
+		if strings.Contains(err.Error(), "tls") || strings.Contains(err.Error(), "TLS") {
+			log.Printf("TLS ERROR DETAILS: The error suggests a TLS mismatch.")
+			log.Printf("  Current GRPS_BACKEND_USE_TLS setting: %v", cfg.UseTLS)
+			log.Printf("  If your gRPC server uses -plaintext (no TLS), ensure GRPS_BACKEND_USE_TLS is set to false")
+			log.Printf("  If your gRPC server uses TLS, ensure GRPS_BACKEND_USE_TLS is set to true")
+		}
 	} else {
 		log.Printf("Successfully connected to gRPC backend at %s", cfg.BackendAddr)
 		srv.backendConn = conn
@@ -122,8 +131,10 @@ func loadConfig() Config {
 func dialBackend(ctx context.Context, cfg Config) (*grpc.ClientConn, error) {
 	var creds credentials.TransportCredentials
 	if cfg.UseTLS {
+		log.Printf("DEBUG: Using TLS credentials for connection to %s", cfg.BackendAddr)
 		creds = credentials.NewClientTLSFromCert(nil, cfg.ServerName)
 	} else {
+		log.Printf("DEBUG: Using insecure (no TLS) credentials for connection to %s", cfg.BackendAddr)
 		creds = insecure.NewCredentials()
 	}
 
@@ -132,6 +143,7 @@ func dialBackend(ctx context.Context, cfg Config) (*grpc.ClientConn, error) {
 		opts = append(opts, grpc.WithAuthority(cfg.ServerName))
 	}
 
+	log.Printf("DEBUG: Dialing gRPC backend at %s with TLS=%v", cfg.BackendAddr, cfg.UseTLS)
 	return grpc.DialContext(ctx, cfg.BackendAddr, opts...)
 }
 

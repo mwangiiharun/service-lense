@@ -98,12 +98,15 @@ export function loadEnvSettings(): EnvSettings {
     backendAddr = backendAddr.toLowerCase();
     
     // Ensure useTLS is a boolean (handle string "true"/"false" from old saves)
-    let useTLS = defaultEnvSettings.useTLS;
-    if (parsed.useTLS !== undefined) {
+    // Default to false if not set or invalid
+    let useTLS = false;
+    if (parsed.useTLS !== undefined && parsed.useTLS !== null) {
       if (typeof parsed.useTLS === "boolean") {
         useTLS = parsed.useTLS;
       } else if (typeof parsed.useTLS === "string") {
         useTLS = parsed.useTLS.toLowerCase() === "true";
+      } else if (typeof parsed.useTLS === "number") {
+        useTLS = parsed.useTLS !== 0;
       }
     }
     
