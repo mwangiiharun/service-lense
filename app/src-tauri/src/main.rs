@@ -30,7 +30,7 @@ impl BackendProcess {
         self.config = config.clone();
         let config = config.unwrap_or_else(|| BackendConfig {
             backend_addr: "localhost:9090".to_string(),
-            http_addr: ":8081".to_string(),
+            http_addr: ":8082".to_string(),  // Changed from :8081 to avoid conflict with user's gRPC backend
             use_tls: false,
             allow_origins: "http://localhost:5173".to_string(),
         });

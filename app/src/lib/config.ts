@@ -60,7 +60,7 @@ const defaultEnvSettings: EnvSettings = {
   backendAddr: "localhost:9090",
   allowOrigins: "http://localhost:5173",
   useTLS: false,
-  httpAddr: ":8081"
+  httpAddr: ":8082"  // Changed from :8081 to avoid conflict with user's gRPC backend
 };
 
 export function loadEnvSettings(): EnvSettings {

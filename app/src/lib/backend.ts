@@ -28,7 +28,7 @@ export async function restartBackend(config: EnvSettings): Promise<void> {
  */
 export function getInspectorBackendAddress(): string {
   // The Inspector backend proxy runs on the HTTP_ADDR port
-  // Default is :8081, which means localhost:8081
-  return "http://localhost:8081";
+  // Default is :8082, which means localhost:8082
+  return "http://localhost:8082";
 }
 

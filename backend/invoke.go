@@ -78,7 +78,7 @@ func (s *Server) invokeHandler(w http.ResponseWriter, r *http.Request) {
 		} else if strings.Contains(errMsg, "no such host") {
 			errMsg = "Host not found: The gRPC backend address is invalid. Please check GRPS_BACKEND_ADDR in Settings."
 		}
-		
+
 		writeJSON(w, http.StatusBadGateway, InvokeResponse{
 			Error: &InvokeError{
 				Message: errMsg,
