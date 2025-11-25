@@ -72,6 +72,62 @@ This will:
 - Build the React frontend
 - Package everything into a Tauri desktop app
 
+### Creating a Release DMG Locally
+
+To create a release DMG for macOS:
+
+1. **Build the backend binary for your architecture:**
+   ```bash
+   # From the project root
+   mkdir -p app/src-tauri/binaries
+   cd backend
+   
+   # For Apple Silicon (M1/M2/M3)
+   GOOS=darwin GOARCH=arm64 go build -o ../app/src-tauri/binaries/backend-aarch64-apple-darwin .
+   chmod +x ../app/src-tauri/binaries/backend-aarch64-apple-darwin
+   
+   # For Intel Macs
+   GOOS=darwin GOARCH=amd64 go build -o ../app/src-tauri/binaries/backend-x86_64-apple-darwin .
+   chmod +x ../app/src-tauri/binaries/backend-x86_64-apple-darwin
+   ```
+
+2. **Build the frontend:**
+   ```bash
+   cd app
+   npm install
+   npm run build
+   ```
+
+3. **Build the Tauri app and create DMG:**
+   ```bash
+   cd app
+   npx tauri build --bundles dmg
+   ```
+
+4. **Verify the DMG contents:**
+   ```bash
+   # Find the DMG
+   DMG_PATH=$(find app/src-tauri/target/release/bundle/dmg -name "*.dmg" | head -1)
+   
+   # Mount it
+   hdiutil attach "$DMG_PATH" -mountpoint /tmp/servicelens_dmg
+   
+   # Check for backend binary
+   find /tmp/servicelens_dmg -name "*backend*"
+   
+   # Check Resources directory
+   find /tmp/servicelens_dmg -name "ServiceLens.app" -type d | head -1 | xargs -I {} ls -la {}/Contents/Resources/
+   
+   # Unmount
+   hdiutil detach /tmp/servicelens_dmg
+   ```
+
+The DMG will be located at:
+- `app/src-tauri/target/release/bundle/dmg/ServiceLens_0.2.0_x64.dmg` (Intel)
+- `app/src-tauri/target/release/bundle/dmg/ServiceLens_0.2.0_aarch64.dmg` (Apple Silicon)
+
+**Note:** The backend binary must be built for the target architecture before running `tauri build`. The binary will be bundled into the DMG and accessible at runtime.
+
 ### Release Builds
 
 Release builds are automated via GitHub Actions. The pipeline builds:
