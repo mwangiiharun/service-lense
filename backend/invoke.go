@@ -40,8 +40,10 @@ type InvokeError struct {
 
 // invokeHandler executes dynamic unary RPCs against the connected backend.
 func (s *Server) invokeHandler(w http.ResponseWriter, r *http.Request) {
-	if s.backendConn == nil {
-		http.Error(w, "Backend not connected. Please configure GRPS_BACKEND_ADDR in Settings and restart the backend.", http.StatusServiceUnavailable)
+	// Ensure connection exists and is healthy
+	ctx := r.Context()
+	if err := s.ensureConnection(ctx); err != nil {
+		http.Error(w, fmt.Sprintf("Failed to connect to backend: %v. Please check GRPS_BACKEND_ADDR in Settings.", err), http.StatusServiceUnavailable)
 		return
 	}
 	var in InvokeRequest

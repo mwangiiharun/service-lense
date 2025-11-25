@@ -74,15 +74,10 @@ type InspectorDescriptor struct {
 }
 
 func (s *Server) capabilitiesHandler(w http.ResponseWriter, r *http.Request) {
-	if s.backendConn == nil {
-		http.Error(w, "Backend not connected. Please configure GRPS_BACKEND_ADDR in Settings and restart the backend.", http.StatusServiceUnavailable)
-		return
-	}
-
-	// Check if connection is still valid
-	state := s.backendConn.GetState()
-	if state.String() == "TRANSIENT_FAILURE" || state.String() == "SHUTDOWN" {
-		http.Error(w, fmt.Sprintf("Backend connection is broken (state: %s). The gRPC backend at %s may not be running. Please check GRPS_BACKEND_ADDR in Settings and ensure your gRPC backend is running, then restart the ServiceLens backend.", state.String(), s.cfg.BackendAddr), http.StatusServiceUnavailable)
+	// Ensure connection exists and is healthy
+	ctx := r.Context()
+	if err := s.ensureConnection(ctx); err != nil {
+		http.Error(w, fmt.Sprintf("Failed to connect to backend: %v. Please check GRPS_BACKEND_ADDR in Settings.", err), http.StatusServiceUnavailable)
 		return
 	}
 
