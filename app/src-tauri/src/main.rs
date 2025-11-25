@@ -5,6 +5,50 @@ use std::sync::Mutex;
 use tauri::Manager;
 use serde::{Deserialize, Serialize};
 
+// Helper function to extract port number from address string like ":9000" or "localhost:9000"
+fn extract_port(addr: &str) -> Option<u16> {
+    addr.split(':').last()
+        .and_then(|p| p.parse::<u16>().ok())
+}
+
+// Kill any process using the specified port
+fn kill_process_on_port(port: u16) {
+    #[cfg(unix)]
+    {
+        use std::process::Command;
+        // Try to find and kill process using the port
+        if let Ok(output) = Command::new("lsof")
+            .args(&["-ti", &format!(":{}", port)])
+            .output()
+        {
+            if !output.stdout.is_empty() {
+                if let Ok(pid_str) = String::from_utf8(output.stdout) {
+                    for pid in pid_str.trim().split('\n') {
+                        if let Ok(pid_num) = pid.trim().parse::<i32>() {
+                            let _ = Command::new("kill")
+                                .args(&["-9", &pid_num.to_string()])
+                                .output();
+                            eprintln!("Killed process {} on port {}", pid_num, port);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    #[cfg(windows)]
+    {
+        use std::process::Command;
+        // Windows: use netstat and taskkill
+        if let Ok(output) = Command::new("netstat")
+            .args(&["-ano"])
+            .output()
+        {
+            // Parse netstat output to find PID and kill it
+            // Implementation would parse the output here
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct BackendConfig {
     backend_addr: String,
@@ -229,6 +273,17 @@ impl BackendProcess {
             // Wait for process to exit
             let _ = child.wait();
             println!("Backend process stopped");
+        }
+        
+        // Also kill any processes using the configured HTTP port (9000 by default)
+        // This handles cases where a previous instance didn't shut down cleanly
+        if let Some(config) = &self.config {
+            if let Some(port) = extract_port(&config.http_addr) {
+                kill_process_on_port(port);
+            }
+        } else {
+            // Default port if no config
+            kill_process_on_port(9000);
         }
     }
 }
