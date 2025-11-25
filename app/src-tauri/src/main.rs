@@ -90,51 +90,76 @@ impl BackendProcess {
                 return Err("Unsupported target OS".into());
             };
             
-            // Look for binary - externalBin places binaries in MacOS directory as "backend"
-            // Tauri expects "backend-${TARGET_TRIPLE}" in source, but places it as "backend" in MacOS
-            let app_dir = app.path().app_dir()?;
-            let mut backend_bin = app_dir.join("backend");
+            // Look for binary - externalBin places binaries in the same directory as the executable
+            // On macOS, this is Contents/MacOS/, and Tauri renames it to just "backend"
+            // Try multiple locations in order of preference
             
-            // Fallback: try resource_dir locations (for resources or older builds)
-            if !backend_bin.exists() {
-                let resource_dir = app.path().resource_dir()?;
-                backend_bin = resource_dir.join("binaries").join(&binary_name);
-                
-                if !backend_bin.exists() {
-                    backend_bin = resource_dir.join(&binary_name);
+            let mut backend_bin = None;
+            
+            // 1. Try executable_dir (where externalBin binaries are placed)
+            if let Ok(exe_dir) = app.path().executable_dir() {
+                let path = exe_dir.join("backend");
+                eprintln!("Checking executable_dir: {:?} (exists: {})", path, path.exists());
+                if path.exists() {
+                    backend_bin = Some(path);
                 }
             }
             
-            // Debug: log the paths we're checking
+            // 2. Try resource_dir/binaries (fallback for resources approach)
+            if backend_bin.is_none() {
+                if let Ok(resource_dir) = app.path().resource_dir() {
+                    let path = resource_dir.join("binaries").join(&binary_name);
+                    eprintln!("Checking resource_dir/binaries: {:?} (exists: {})", path, path.exists());
+                    if path.exists() {
+                        backend_bin = Some(path);
+                    }
+                }
+            }
+            
+            // 3. Try resource_dir directly (another fallback)
+            if backend_bin.is_none() {
+                if let Ok(resource_dir) = app.path().resource_dir() {
+                    let path = resource_dir.join(&binary_name);
+                    eprintln!("Checking resource_dir: {:?} (exists: {})", path, path.exists());
+                    if path.exists() {
+                        backend_bin = Some(path);
+                    }
+                }
+            }
+            
+            // Debug: log all paths we checked
             eprintln!("Looking for backend binary:");
             eprintln!("  Expected name: {}", binary_name);
-            eprintln!("  App dir: {:?}", app_dir);
-            eprintln!("  Checking path: {:?}", backend_bin);
-            eprintln!("  Exists: {}", backend_bin.exists());
             
-            if !backend_bin.exists() {
-                // List possible locations for debugging
-                eprintln!("  App dir contents:");
-                if app_dir.exists() {
-                    if let Ok(entries) = std::fs::read_dir(&app_dir) {
+            if let Ok(exe_dir) = app.path().executable_dir() {
+                eprintln!("  Executable dir: {:?}", exe_dir);
+                if exe_dir.exists() {
+                    eprintln!("  Executable dir contents:");
+                    if let Ok(entries) = std::fs::read_dir(&exe_dir) {
                         for entry in entries.flatten() {
                             eprintln!("    - {:?}", entry.path());
                         }
                     }
                 }
-                
-                let resource_dir = app.path().resource_dir()?;
+            }
+            
+            if let Ok(resource_dir) = app.path().resource_dir() {
                 eprintln!("  Resource dir: {:?}", resource_dir);
                 if resource_dir.exists() {
+                    eprintln!("  Resource dir contents:");
                     if let Ok(entries) = std::fs::read_dir(&resource_dir) {
                         for entry in entries.flatten() {
                             eprintln!("    - {:?}", entry.path());
                         }
                     }
                 }
-                
-                return Err(format!("Backend binary not found at: {:?}", backend_bin).into());
             }
+            
+            let backend_bin = backend_bin.ok_or_else(|| {
+                format!("Backend binary not found. Checked executable_dir and resource_dir locations.")
+            })?;
+            
+            eprintln!("  Found backend binary at: {:?}", backend_bin);
 
             let mut cmd = Command::new(&backend_bin);
             cmd.stdout(std::process::Stdio::piped());
