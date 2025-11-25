@@ -76,6 +76,14 @@ func (s *Server) capabilitiesHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Backend not connected. Please configure GRPS_BACKEND_ADDR in Settings and restart the backend.", http.StatusServiceUnavailable)
 		return
 	}
+	
+	// Check if connection is still valid
+	state := s.backendConn.GetState()
+	if state.String() == "TRANSIENT_FAILURE" || state.String() == "SHUTDOWN" {
+		http.Error(w, fmt.Sprintf("Backend connection is broken (state: %s). The gRPC backend at %s may not be running. Please check GRPS_BACKEND_ADDR in Settings and ensure your gRPC backend is running, then restart the ServiceLens backend.", state.String(), s.cfg.BackendAddr), http.StatusServiceUnavailable)
+		return
+	}
+	
 	// Recover from panics to prevent server crashes
 	defer func() {
 		if r := recover(); r != nil {
@@ -88,7 +96,18 @@ func (s *Server) capabilitiesHandler(w http.ResponseWriter, r *http.Request) {
 	manifest, err := s.buildCapabilityManifest(ctx)
 	if err != nil {
 		log.Printf("ERROR: failed to collect capabilities: %v", err)
-		http.Error(w, "failed to collect capabilities: "+err.Error(), http.StatusInternalServerError)
+		
+		// Provide helpful error messages for common connection issues
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "connection refused") {
+			errMsg = fmt.Sprintf("Connection refused: The gRPC backend at %s is not running or not accessible. Please:\n1. Ensure your gRPC backend is running on port 8081\n2. Check that GRPS_BACKEND_ADDR in Settings is correct (currently: %s)\n3. Verify GRPS_BACKEND_USE_TLS matches your backend's TLS configuration\n4. Restart the ServiceLens backend", s.cfg.BackendAddr, s.cfg.BackendAddr)
+		} else if strings.Contains(errMsg, "no such host") {
+			errMsg = fmt.Sprintf("Host not found: The gRPC backend address '%s' is invalid. Please check GRPS_BACKEND_ADDR in Settings.", s.cfg.BackendAddr)
+		} else if strings.Contains(errMsg, "TLS") || strings.Contains(errMsg, "tls") {
+			errMsg = fmt.Sprintf("TLS error: There's a TLS configuration mismatch. Please check GRPS_BACKEND_USE_TLS in Settings (currently: %v) and ensure it matches your gRPC backend's TLS configuration.", s.cfg.UseTLS)
+		}
+		
+		http.Error(w, "failed to collect capabilities: "+errMsg, http.StatusServiceUnavailable)
 		return
 	}
 
