@@ -14,18 +14,18 @@ import (
 	"github.com/jhump/protoreflect/grpcreflect"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/protobuf/types/descriptorpb"
 	refv1 "google.golang.org/grpc/reflection/grpc_reflection_v1alpha"
+	"google.golang.org/protobuf/types/descriptorpb"
 )
 
 type MethodInfo struct {
-	Service         string                `json:"service"`
-	Method          string                `json:"method"`
-	FullName        string                `json:"fullName"`
-	RequestType     string                `json:"requestType"`
-	ResponseType    string                `json:"responseType"`
-	ClientStreaming bool                  `json:"clientStreaming"`
-	ServerStreaming bool                  `json:"serverStreaming"`
+	Service         string                 `json:"service"`
+	Method          string                 `json:"method"`
+	FullName        string                 `json:"fullName"`
+	RequestType     string                 `json:"requestType"`
+	ResponseType    string                 `json:"responseType"`
+	ClientStreaming bool                   `json:"clientStreaming"`
+	ServerStreaming bool                   `json:"serverStreaming"`
 	MethodDesc      *desc.MethodDescriptor `json:"-"` // Internal use for generating examples
 }
 
@@ -99,14 +99,14 @@ func (s *Server) schemaHandler(w http.ResponseWriter, r *http.Request) {
 // It populates fields with example values based on field names and types
 func generateExamplePayload(msgDesc *desc.MessageDescriptor) (map[string]any, error) {
 	msg := dynamic.NewMessage(msgDesc)
-	
+
 	// Populate fields with example values
 	for _, field := range msgDesc.GetFields() {
 		exampleValue := generateExampleValue(field)
 		if exampleValue == nil {
 			continue
 		}
-		
+
 		// Try to set the field, but skip if it fails (e.g., type mismatch)
 		func() {
 			defer func() {
@@ -115,7 +115,7 @@ func generateExamplePayload(msgDesc *desc.MessageDescriptor) (map[string]any, er
 					log.Printf("WARN: Skipping field %s due to error: %v", field.GetName(), r)
 				}
 			}()
-			
+
 			if field.IsRepeated() {
 				// For repeated fields, add a single example element
 				msg.AddRepeatedField(field, exampleValue)
@@ -124,23 +124,23 @@ func generateExamplePayload(msgDesc *desc.MessageDescriptor) (map[string]any, er
 			}
 		}()
 	}
-	
+
 	// Convert to JSON
 	jsonBytes, err := msg.MarshalJSON()
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var result map[string]any
 	if err := json.Unmarshal(jsonBytes, &result); err != nil {
 		return nil, err
 	}
-	
+
 	// If the result is empty (no fields), return nil to indicate no example available
 	if len(result) == 0 {
 		return nil, nil
 	}
-	
+
 	return result, nil
 }
 
@@ -148,13 +148,13 @@ func generateExamplePayload(msgDesc *desc.MessageDescriptor) (map[string]any, er
 func generateExampleValue(field *desc.FieldDescriptor) interface{} {
 	fieldName := strings.ToLower(field.GetName())
 	fieldType := field.GetType()
-	
+
 	// Skip message types (nested messages) - they're complex and would require recursive handling
 	// Returning nil will skip these fields in the example
 	if fieldType == descriptorpb.FieldDescriptorProto_TYPE_MESSAGE {
 		return nil
 	}
-	
+
 	// Generate value based on field name patterns first, then fall back to type
 	switch {
 	// String fields with semantic meaning
@@ -191,7 +191,7 @@ func generateExampleValue(field *desc.FieldDescriptor) interface{} {
 		default:
 			return "example"
 		}
-	
+
 	// Integer fields
 	case fieldType == descriptorpb.FieldDescriptorProto_TYPE_INT32 || fieldType == descriptorpb.FieldDescriptorProto_TYPE_SINT32 || fieldType == descriptorpb.FieldDescriptorProto_TYPE_SFIXED32:
 		if strings.Contains(fieldName, "page") || strings.Contains(fieldName, "size") || strings.Contains(fieldName, "limit") {
@@ -201,7 +201,7 @@ func generateExampleValue(field *desc.FieldDescriptor) interface{} {
 			return int32(8080)
 		}
 		return int32(0)
-	
+
 	case fieldType == descriptorpb.FieldDescriptorProto_TYPE_INT64 || fieldType == descriptorpb.FieldDescriptorProto_TYPE_SINT64 || fieldType == descriptorpb.FieldDescriptorProto_TYPE_SFIXED64:
 		if strings.Contains(fieldName, "page") || strings.Contains(fieldName, "size") || strings.Contains(fieldName, "limit") {
 			return int64(10)
@@ -213,14 +213,14 @@ func generateExampleValue(field *desc.FieldDescriptor) interface{} {
 			return int64(100)
 		}
 		return int64(0)
-	
+
 	// Unsigned integer fields
 	case fieldType == descriptorpb.FieldDescriptorProto_TYPE_UINT32 || fieldType == descriptorpb.FieldDescriptorProto_TYPE_FIXED32:
 		return uint32(0)
-	
+
 	case fieldType == descriptorpb.FieldDescriptorProto_TYPE_UINT64 || fieldType == descriptorpb.FieldDescriptorProto_TYPE_FIXED64:
 		return uint64(0)
-	
+
 	// Boolean fields
 	case fieldType == descriptorpb.FieldDescriptorProto_TYPE_BOOL:
 		if strings.Contains(fieldName, "allow") || strings.Contains(fieldName, "enable") || strings.Contains(fieldName, "active") {
@@ -230,11 +230,11 @@ func generateExampleValue(field *desc.FieldDescriptor) interface{} {
 			return false
 		}
 		return false
-	
+
 	// Floating point fields
 	case fieldType == descriptorpb.FieldDescriptorProto_TYPE_FLOAT:
 		return float32(0.0)
-	
+
 	case fieldType == descriptorpb.FieldDescriptorProto_TYPE_DOUBLE:
 		if strings.Contains(fieldName, "price") || strings.Contains(fieldName, "amount") || strings.Contains(fieldName, "cost") {
 			return 99.99
@@ -243,11 +243,11 @@ func generateExampleValue(field *desc.FieldDescriptor) interface{} {
 			return 0.5
 		}
 		return 0.0
-	
+
 	// Bytes fields
 	case fieldType == descriptorpb.FieldDescriptorProto_TYPE_BYTES:
 		return []byte("example")
-	
+
 	// Enum fields - try to get first enum value
 	case fieldType == descriptorpb.FieldDescriptorProto_TYPE_ENUM:
 		enumDesc := field.GetEnumType()
@@ -257,7 +257,7 @@ func generateExampleValue(field *desc.FieldDescriptor) interface{} {
 		}
 		return ""
 	}
-	
+
 	return nil
 }
 

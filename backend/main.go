@@ -2,19 +2,19 @@ package main
 
 import (
 	"context"
-    "log"
-    "net"
-    "net/http"
+	"log"
+	"net"
+	"net/http"
 	"net/url"
 	"os"
 	"strings"
 
-    "github.com/improbable-eng/grpc-web/go/grpcweb"
-    "google.golang.org/grpc"
+	"github.com/improbable-eng/grpc-web/go/grpcweb"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
-    "google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/reflection"
 )
 
 type Config struct {
@@ -30,9 +30,9 @@ type Config struct {
 
 type Server struct {
 	cfg         Config
-    grpcServer  *grpc.Server
-    backendConn *grpc.ClientConn // nil if backend is not connected
-    traffic     *trafficBuffer
+	grpcServer  *grpc.Server
+	backendConn *grpc.ClientConn // nil if backend is not connected
+	traffic     *trafficBuffer
 }
 
 func main() {
@@ -42,63 +42,63 @@ func main() {
 		log.Fatalf("GRPS_BACKEND_ADDR must be configured (set via environment variable or UI settings)")
 	}
 
-    srv := &Server{
+	srv := &Server{
 		cfg:         cfg,
-        traffic:     newTrafficBuffer(500),
+		traffic:     newTrafficBuffer(500),
 		backendConn: nil, // Will be connected lazily or on startup
-    }
+	}
 
 	// Try to connect to backend, but don't fail if it's not available yet
 	// The HTTP server will start anyway and return appropriate errors
 	log.Printf("Attempting to connect to gRPC backend at %s (TLS: %v)...", cfg.BackendAddr, cfg.UseTLS)
 	conn, err := dialBackend(context.Background(), cfg)
-    if err != nil {
-        log.Printf("WARNING: Failed to connect to gRPC backend at %s: %v", cfg.BackendAddr, err)
+	if err != nil {
+		log.Printf("WARNING: Failed to connect to gRPC backend at %s: %v", cfg.BackendAddr, err)
 		log.Printf("The HTTP server will start anyway. Configure the correct backend address in Settings and restart.")
 		log.Printf("Make sure:\n1. The gRPC backend is running\n2. GRPS_BACKEND_ADDR is correct\n3. GRPS_BACKEND_USE_TLS matches the backend's TLS configuration")
-    } else {
+	} else {
 		log.Printf("Successfully connected to gRPC backend at %s", cfg.BackendAddr)
 		srv.backendConn = conn
 	}
 
 	srv.grpcServer = grpc.NewServer(grpc.ChainUnaryInterceptor(srv.loggingUnaryInterceptor))
-    reflection.Register(srv.grpcServer)
+	reflection.Register(srv.grpcServer)
 
-    wrapped := grpcweb.WrapServer(
-        srv.grpcServer,
+	wrapped := grpcweb.WrapServer(
+		srv.grpcServer,
 		grpcweb.WithOriginFunc(srv.allowOrigin),
-    )
+	)
 
-    mux := http.NewServeMux()
+	mux := http.NewServeMux()
 	mux.HandleFunc("/schema", srv.corsMiddleware(srv.schemaHandler))
 	mux.HandleFunc("/traffic", srv.corsMiddleware(srv.trafficHandler))
 	mux.HandleFunc("/invoke", srv.corsMiddleware(srv.invokeHandler))
 	mux.HandleFunc("/inspector/capabilities", srv.corsMiddleware(srv.capabilitiesHandler))
 	mux.HandleFunc("/healthz", srv.corsMiddleware(srv.healthHandler))
 
-    mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-        if wrapped.IsGrpcWebRequest(r) || wrapped.IsAcceptableGrpcCorsRequest(r) {
-            wrapped.ServeHTTP(w, r)
-            return
-        }
-        http.NotFound(w, r)
-    })
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if wrapped.IsGrpcWebRequest(r) || wrapped.IsAcceptableGrpcCorsRequest(r) {
+			wrapped.ServeHTTP(w, r)
+			return
+		}
+		http.NotFound(w, r)
+	})
 
-    go func() {
+	go func() {
 		lis, err := net.Listen("tcp", cfg.GRPCAddr)
-        if err != nil {
-            log.Fatalf("listen grpc: %v", err)
-        }
+		if err != nil {
+			log.Fatalf("listen grpc: %v", err)
+		}
 		log.Printf("gRPC server listening on %s\n", cfg.GRPCAddr)
-        if err := srv.grpcServer.Serve(lis); err != nil {
-            log.Fatalf("grpc serve: %v", err)
-        }
-    }()
+		if err := srv.grpcServer.Serve(lis); err != nil {
+			log.Fatalf("grpc serve: %v", err)
+		}
+	}()
 
 	log.Printf("HTTP / gRPC-Web proxy listening on %s\n", cfg.HTTPAddr)
 	if err := http.ListenAndServe(cfg.HTTPAddr, mux); err != nil {
-        log.Fatalf("http serve: %v", err)
-    }
+		log.Fatalf("http serve: %v", err)
+	}
 }
 
 func loadConfig() Config {

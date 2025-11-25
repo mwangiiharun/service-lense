@@ -2,27 +2,27 @@ package main
 
 import (
 	"context"
-    "encoding/json"
+	"encoding/json"
 	"errors"
 	"fmt"
-    "net/http"
+	"net/http"
 	"strings"
 	"time"
 
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/dynamic"
 	"github.com/jhump/protoreflect/grpcreflect"
-    "google.golang.org/grpc"
-    "google.golang.org/grpc/metadata"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	refv1 "google.golang.org/grpc/reflection/grpc_reflection_v1alpha"
 	"google.golang.org/grpc/status"
 )
 
 // InvokeRequest is the payload from the UI playground.
 type InvokeRequest struct {
-    FullMethod string            `json:"fullMethod"`
-    Metadata   map[string]string `json:"metadata"`
-    Payload    map[string]any    `json:"payload"`
+	FullMethod string            `json:"fullMethod"`
+	Metadata   map[string]string `json:"metadata"`
+	Payload    map[string]any    `json:"payload"`
 }
 
 type InvokeResponse struct {
@@ -44,11 +44,11 @@ func (s *Server) invokeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Backend not connected. Please configure GRPS_BACKEND_ADDR in Settings and restart the backend.", http.StatusServiceUnavailable)
 		return
 	}
-    var in InvokeRequest
-    if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
-        http.Error(w, "invalid json: "+err.Error(), http.StatusBadRequest)
-        return
-    }
+	var in InvokeRequest
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		http.Error(w, "invalid json: "+err.Error(), http.StatusBadRequest)
+		return
+	}
 	if in.FullMethod == "" {
 		http.Error(w, "fullMethod is required", http.StatusBadRequest)
 		return
@@ -69,9 +69,19 @@ func (s *Server) invokeHandler(w http.ResponseWriter, r *http.Request) {
 	s.recordTraffic(normalizedMethod, md, in.Payload, result, err, start, duration)
 
 	if err != nil {
+		// Provide helpful error messages for common issues
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "tls: first record does not look like a TLS handshake") {
+			errMsg = "TLS mismatch: The backend is configured with TLS but the target server is not using TLS (or vice versa). Please check GRPS_BACKEND_USE_TLS in Settings and ensure it matches your gRPC backend's TLS configuration."
+		} else if strings.Contains(errMsg, "connection refused") {
+			errMsg = "Connection refused: The gRPC backend is not running or the address is incorrect. Please check GRPS_BACKEND_ADDR in Settings."
+		} else if strings.Contains(errMsg, "no such host") {
+			errMsg = "Host not found: The gRPC backend address is invalid. Please check GRPS_BACKEND_ADDR in Settings."
+		}
+		
 		writeJSON(w, http.StatusBadGateway, InvokeResponse{
 			Error: &InvokeError{
-				Message: err.Error(),
+				Message: errMsg,
 				Code:    status.Code(err).String(),
 			},
 		})
@@ -189,7 +199,7 @@ func normalizeFullMethod(method string) string {
 }
 
 func writeJSON(w http.ResponseWriter, statusCode int, payload any) {
-    w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	_ = json.NewEncoder(w).Encode(payload)
 }
