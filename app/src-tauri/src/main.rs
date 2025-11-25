@@ -131,7 +131,7 @@ impl BackendProcess {
             let backend_addr = config.backend_addr.clone();
             let http_addr = config.http_addr.clone();
             // FORCE TLS TO FALSE - always use plaintext connections
-            let use_tls = false;
+            let _use_tls = false; // Unused but kept for clarity
             let allow_origins = config.allow_origins.clone();
             
             // Debug: log the environment variables being set (before moving values)
@@ -260,7 +260,7 @@ impl BackendProcess {
             let backend_addr = config.backend_addr.clone();
             let http_addr = config.http_addr.clone();
             // FORCE TLS TO FALSE - always use plaintext connections
-            let use_tls = false;
+            let _use_tls = false; // Unused but kept for clarity
             let allow_origins = config.allow_origins.clone();
             
             // Debug: log the environment variables being set (before moving values)

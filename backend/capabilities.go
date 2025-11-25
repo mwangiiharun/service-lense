@@ -83,13 +83,12 @@ func (s *Server) capabilitiesHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Recover from panics to prevent server crashes
 	defer func() {
-		if r := recover(); r != nil {
-			log.Printf("PANIC in capabilitiesHandler: %v", r)
+		if rec := recover(); rec != nil {
+			log.Printf("PANIC in capabilitiesHandler: %v", rec)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 		}
 	}()
 
-	ctx := r.Context()
 	manifest, err := s.buildCapabilityManifest(ctx)
 	if err != nil {
 		log.Printf("ERROR: failed to collect capabilities: %v", err)

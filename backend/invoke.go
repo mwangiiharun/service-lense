@@ -56,7 +56,6 @@ func (s *Server) invokeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := r.Context()
 	normalizedMethod := normalizeFullMethod(in.FullMethod)
 
 	md := metadata.Join(s.cfg.DefaultMD, buildOutgoingMetadata(in.Metadata))
