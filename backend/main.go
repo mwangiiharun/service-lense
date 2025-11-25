@@ -155,26 +155,17 @@ func dialBackend(ctx context.Context, cfg Config) (*grpc.ClientConn, error) {
 
 	log.Printf("Dialing gRPC backend at %s with TLS=FALSE (forced, insecure only)", cfg.BackendAddr)
 	
-	// Use NewClient instead of DialContext to ensure fresh connection
-	// Add WithBlock to ensure connection is established before returning
+	// Use DialContext with WithBlock to ensure connection is established
+	// This ensures we get a fresh connection every time with TLS=false
 	opts = append(opts, grpc.WithBlock())
 	
-	conn, err := grpc.NewClient(cfg.BackendAddr, opts...)
+	conn, err := grpc.DialContext(ctx, cfg.BackendAddr, opts...)
 	if err != nil {
 		log.Printf("ERROR dialing backend: %v", err)
 		return nil, err
 	}
 	
-	// Wait for connection to be ready
-	readyCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-	if !conn.WaitForStateChange(readyCtx, grpc.Idle) {
-		// Connection is ready
-		log.Printf("SUCCESS: Connected to %s with insecure (no TLS) credentials", cfg.BackendAddr)
-	} else {
-		log.Printf("SUCCESS: Connected to %s with insecure (no TLS) credentials (state changed)", cfg.BackendAddr)
-	}
-	
+	log.Printf("SUCCESS: Connected to %s with insecure (no TLS) credentials", cfg.BackendAddr)
 	return conn, nil
 }
 
