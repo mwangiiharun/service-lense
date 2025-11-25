@@ -130,20 +130,21 @@ impl BackendProcess {
             // Priority: config > environment variable > default
             let backend_addr = config.backend_addr.clone();
             let http_addr = config.http_addr.clone();
-            let use_tls = config.use_tls; // Use config value directly, don't check env var first
+            // FORCE TLS TO FALSE - always use plaintext connections
+            let use_tls = false;
             let allow_origins = config.allow_origins.clone();
             
             // Debug: log the environment variables being set (before moving values)
-            eprintln!("Starting backend (dev mode) with env vars:");
+            eprintln!("Starting backend (dev mode) with env vars (TLS FORCED TO FALSE):");
             eprintln!("  GRPS_BACKEND_ADDR={}", backend_addr);
             eprintln!("  GRPS_HTTP_ADDR={}", http_addr);
-            eprintln!("  GRPS_BACKEND_USE_TLS={}", if use_tls { "true" } else { "false" });
+            eprintln!("  GRPS_BACKEND_USE_TLS=false (FORCED)");
             eprintln!("  GRPS_ALLOW_ORIGINS={}", allow_origins);
             
             cmd.env("GRPS_BACKEND_ADDR", backend_addr);
             cmd.env("GRPS_HTTP_ADDR", http_addr);
-            // Set TLS as "true" or "false" string (envBool accepts "true"/"false" strings)
-            cmd.env("GRPS_BACKEND_USE_TLS", if use_tls { "true" } else { "false" });
+            // FORCE TLS TO FALSE - always use plaintext
+            cmd.env("GRPS_BACKEND_USE_TLS", "false");
             cmd.env("GRPS_ALLOW_ORIGINS", allow_origins);
             cmd.env("GRPS_AUTO_ALLOW_DEV_ORIGINS", "true");
             
@@ -258,20 +259,21 @@ impl BackendProcess {
             // Priority: config > environment variable > default
             let backend_addr = config.backend_addr.clone();
             let http_addr = config.http_addr.clone();
-            let use_tls = config.use_tls; // Use config value directly, don't check env var first
+            // FORCE TLS TO FALSE - always use plaintext connections
+            let use_tls = false;
             let allow_origins = config.allow_origins.clone();
             
             // Debug: log the environment variables being set (before moving values)
-            eprintln!("Starting backend with env vars:");
+            eprintln!("Starting backend with env vars (TLS FORCED TO FALSE):");
             eprintln!("  GRPS_BACKEND_ADDR={}", backend_addr);
             eprintln!("  GRPS_HTTP_ADDR={}", http_addr);
-            eprintln!("  GRPS_BACKEND_USE_TLS={}", if use_tls { "true" } else { "false" });
+            eprintln!("  GRPS_BACKEND_USE_TLS=false (FORCED)");
             eprintln!("  GRPS_ALLOW_ORIGINS={}", allow_origins);
             
             cmd.env("GRPS_BACKEND_ADDR", backend_addr);
             cmd.env("GRPS_HTTP_ADDR", http_addr);
-            // Set TLS as "true" or "false" string (envBool accepts "true"/"false" strings)
-            cmd.env("GRPS_BACKEND_USE_TLS", if use_tls { "true" } else { "false" });
+            // FORCE TLS TO FALSE - always use plaintext
+            cmd.env("GRPS_BACKEND_USE_TLS", "false");
             cmd.env("GRPS_ALLOW_ORIGINS", allow_origins);
             cmd.env("GRPS_AUTO_ALLOW_DEV_ORIGINS", "true");
             

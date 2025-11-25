@@ -115,35 +115,36 @@ func main() {
 }
 
 func loadConfig() Config {
+	// FORCE TLS TO FALSE - always use insecure (plaintext) connections
+	// This matches grpcurl -plaintext behavior
+	useTLS := false
+	
 	cfg := Config{
 		BackendAddr:  envOr("GRPS_BACKEND_ADDR", "localhost:9090"), // Console gRPC server (where inspector backend connects TO)
 		HTTPAddr:     envOr("GRPS_HTTP_ADDR", ":8081"),             // Inspector backend HTTP server (where UI connects)
 		GRPCAddr:     envOr("GRPS_GRPC_ADDR", ":50052"),
 		ServerName:   os.Getenv("GRPS_BACKEND_SERVER_NAME"),
 		AllowOrigin:  splitCSV(envOr("GRPS_ALLOW_ORIGINS", "*")),
-		UseTLS:       envBool("GRPS_BACKEND_USE_TLS", false),
+		UseTLS:       useTLS, // FORCED TO FALSE - always use plaintext
 		DefaultMD:    parseMetadata(envOr("GRPS_DEFAULT_METADATA", "")),
 		AutoAllowDev: envBool("GRPS_AUTO_ALLOW_DEV_ORIGINS", true),
 	}
+	log.Printf("FORCED TLS TO FALSE - Using plaintext (insecure) connections only")
 	return cfg
 }
 
 func dialBackend(ctx context.Context, cfg Config) (*grpc.ClientConn, error) {
-	var creds credentials.TransportCredentials
-	if cfg.UseTLS {
-		log.Printf("DEBUG: Using TLS credentials for connection to %s", cfg.BackendAddr)
-		creds = credentials.NewClientTLSFromCert(nil, cfg.ServerName)
-	} else {
-		log.Printf("DEBUG: Using insecure (no TLS) credentials for connection to %s", cfg.BackendAddr)
-		creds = insecure.NewCredentials()
-	}
+	// FORCE TLS TO FALSE - always use insecure (plaintext) connections
+	// This matches grpcurl -plaintext behavior
+	log.Printf("FORCED: Using insecure (no TLS) credentials for connection to %s", cfg.BackendAddr)
+	creds := insecure.NewCredentials()
 
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(creds)}
 	if cfg.ServerName != "" {
 		opts = append(opts, grpc.WithAuthority(cfg.ServerName))
 	}
 
-	log.Printf("DEBUG: Dialing gRPC backend at %s with TLS=%v", cfg.BackendAddr, cfg.UseTLS)
+	log.Printf("Dialing gRPC backend at %s with TLS=FALSE (forced)", cfg.BackendAddr)
 	return grpc.DialContext(ctx, cfg.BackendAddr, opts...)
 }
 
