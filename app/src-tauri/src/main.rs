@@ -51,22 +51,26 @@ impl BackendProcess {
             cmd.stdout(std::process::Stdio::piped());
             cmd.stderr(std::process::Stdio::piped());
             
-            // Use config from UI or fall back to environment variables or defaults
-            let backend_addr = std::env::var("GRPS_BACKEND_ADDR")
-                .unwrap_or_else(|_| config.backend_addr.clone());
-            let http_addr = std::env::var("GRPS_HTTP_ADDR")
-                .unwrap_or_else(|_| config.http_addr.clone());
-            let use_tls = std::env::var("GRPS_BACKEND_USE_TLS")
-                .map(|v| v == "true")
-                .unwrap_or(config.use_tls);
-            let allow_origins = std::env::var("GRPS_ALLOW_ORIGINS")
-                .unwrap_or_else(|_| config.allow_origins.clone());
+            // Use config from UI (if provided) or fall back to environment variables or defaults
+            // Priority: config > environment variable > default
+            let backend_addr = config.backend_addr.clone();
+            let http_addr = config.http_addr.clone();
+            let use_tls = config.use_tls; // Use config value directly, don't check env var first
+            let allow_origins = config.allow_origins.clone();
             
             cmd.env("GRPS_BACKEND_ADDR", backend_addr);
             cmd.env("GRPS_HTTP_ADDR", http_addr);
+            // Set TLS as "true" or "false" string (envBool accepts "true"/"false" strings)
             cmd.env("GRPS_BACKEND_USE_TLS", if use_tls { "true" } else { "false" });
             cmd.env("GRPS_ALLOW_ORIGINS", allow_origins);
             cmd.env("GRPS_AUTO_ALLOW_DEV_ORIGINS", "true");
+            
+            // Debug: log the environment variables being set
+            eprintln!("Starting backend (dev mode) with env vars:");
+            eprintln!("  GRPS_BACKEND_ADDR={}", backend_addr);
+            eprintln!("  GRPS_HTTP_ADDR={}", http_addr);
+            eprintln!("  GRPS_BACKEND_USE_TLS={}", if use_tls { "true" } else { "false" });
+            eprintln!("  GRPS_ALLOW_ORIGINS={}", allow_origins);
             
             let child = cmd.spawn()?;
             self.child = Some(child);
@@ -164,22 +168,26 @@ impl BackendProcess {
             let mut cmd = Command::new(&backend_bin);
             cmd.stdout(std::process::Stdio::piped());
             cmd.stderr(std::process::Stdio::piped());
-            // Use config from UI or fall back to environment variables or defaults
-            let backend_addr = std::env::var("GRPS_BACKEND_ADDR")
-                .unwrap_or_else(|_| config.backend_addr.clone());
-            let http_addr = std::env::var("GRPS_HTTP_ADDR")
-                .unwrap_or_else(|_| config.http_addr.clone());
-            let use_tls = std::env::var("GRPS_BACKEND_USE_TLS")
-                .map(|v| v == "true")
-                .unwrap_or(config.use_tls);
-            let allow_origins = std::env::var("GRPS_ALLOW_ORIGINS")
-                .unwrap_or_else(|_| config.allow_origins.clone());
+            // Use config from UI (if provided) or fall back to environment variables or defaults
+            // Priority: config > environment variable > default
+            let backend_addr = config.backend_addr.clone();
+            let http_addr = config.http_addr.clone();
+            let use_tls = config.use_tls; // Use config value directly, don't check env var first
+            let allow_origins = config.allow_origins.clone();
             
             cmd.env("GRPS_BACKEND_ADDR", backend_addr);
             cmd.env("GRPS_HTTP_ADDR", http_addr);
+            // Set TLS as "true" or "false" string (envBool accepts "true"/"false" strings)
             cmd.env("GRPS_BACKEND_USE_TLS", if use_tls { "true" } else { "false" });
             cmd.env("GRPS_ALLOW_ORIGINS", allow_origins);
             cmd.env("GRPS_AUTO_ALLOW_DEV_ORIGINS", "true");
+            
+            // Debug: log the environment variables being set
+            eprintln!("Starting backend with env vars:");
+            eprintln!("  GRPS_BACKEND_ADDR={}", backend_addr);
+            eprintln!("  GRPS_HTTP_ADDR={}", http_addr);
+            eprintln!("  GRPS_BACKEND_USE_TLS={}", if use_tls { "true" } else { "false" });
+            eprintln!("  GRPS_ALLOW_ORIGINS={}", allow_origins);
             
             let child = cmd.spawn()?;
             self.child = Some(child);
@@ -255,6 +263,13 @@ fn restart_backend(
     app: tauri::AppHandle,
     config: BackendConfig,
 ) -> Result<(), String> {
+    // Debug: log the config being passed
+    eprintln!("Restarting backend with config:");
+    eprintln!("  backend_addr: {}", config.backend_addr);
+    eprintln!("  http_addr: {}", config.http_addr);
+    eprintln!("  use_tls: {}", config.use_tls);
+    eprintln!("  allow_origins: {}", config.allow_origins);
+    
     if let Some(state) = app.try_state::<Mutex<BackendProcess>>() {
         let mut backend = state.lock().map_err(|e| format!("Failed to lock backend: {}", e))?;
         backend.stop();
