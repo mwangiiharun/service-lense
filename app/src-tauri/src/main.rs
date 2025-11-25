@@ -91,14 +91,31 @@ impl BackendProcess {
             };
             
             // Look for binary in resources/binaries directory
-            let backend_bin = app
-                .path()
-                .resource_dir()?
-                .join("binaries")
-                .join(&binary_name);
+            let resource_dir = app.path().resource_dir()?;
+            let backend_bin = resource_dir.join("binaries").join(&binary_name);
+            
+            // Debug: log the paths we're checking
+            eprintln!("Looking for backend binary:");
+            eprintln!("  Resource dir: {:?}", resource_dir);
+            eprintln!("  Binary name: {}", binary_name);
+            eprintln!("  Full path: {:?}", backend_bin);
+            eprintln!("  Exists: {}", backend_bin.exists());
+            
+            // List contents of binaries directory if it exists
+            let binaries_dir = resource_dir.join("binaries");
+            if binaries_dir.exists() {
+                eprintln!("  Binaries directory exists, contents:");
+                if let Ok(entries) = std::fs::read_dir(&binaries_dir) {
+                    for entry in entries.flatten() {
+                        eprintln!("    - {:?}", entry.path());
+                    }
+                }
+            } else {
+                eprintln!("  Binaries directory does not exist: {:?}", binaries_dir);
+            }
             
             if !backend_bin.exists() {
-                return Err(format!("Backend binary not found at: {:?}", backend_bin).into());
+                return Err(format!("Backend binary not found at: {:?}. Resource dir: {:?}", backend_bin, resource_dir).into());
             }
 
             let mut cmd = Command::new(&backend_bin);
