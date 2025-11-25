@@ -75,6 +75,15 @@ impl BackendProcess {
             let child = cmd.spawn()?;
             self.child = Some(child);
             println!("Backend process started (dev mode: go run)");
+            
+            // Give the backend a moment to start, then check if it's still running
+            std::thread::sleep(std::time::Duration::from_millis(500));
+            if let Some(ref mut child) = self.child {
+                if let Ok(Some(status)) = child.try_wait() {
+                    eprintln!("Backend process exited immediately with status: {:?}", status);
+                    return Err("Backend process failed to start".into());
+                }
+            }
         } else {
             // Production: use sidecar binary
             // Determine the correct binary name based on target architecture
@@ -192,6 +201,16 @@ impl BackendProcess {
             let child = cmd.spawn()?;
             self.child = Some(child);
             println!("Backend process started (production mode)");
+            
+            // Give the backend a moment to start, then check if it's still running
+            std::thread::sleep(std::time::Duration::from_millis(500));
+            if let Some(ref mut child) = self.child {
+                if let Ok(Some(status)) = child.try_wait() {
+                    eprintln!("Backend process exited immediately with status: {:?}", status);
+                    // Try to read stderr to see what went wrong
+                    return Err("Backend process failed to start. Check console logs for details.".into());
+                }
+            }
         }
         
         Ok(())
