@@ -263,7 +263,7 @@ export default function App() {
                     setCapabilities(null);
                   }}
                   onBlur={persistAddress}
-                  placeholder="http://localhost:9000"
+                  placeholder="http://localhost:8081"
                 />
                 <button
                   className="primary-btn"

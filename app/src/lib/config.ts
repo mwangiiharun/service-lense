@@ -107,6 +107,6 @@ export function saveEnvSettings(settings: EnvSettings) {
 
 function defaultProfiles(): BackendProfile[] {
   return [
-    { id: "local", name: "Local Dev", address: "http://localhost:9000" }
+    { id: "local", name: "Local Dev", address: "http://localhost:8081" } // Inspector backend HTTP server address
   ];
 }
