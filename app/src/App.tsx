@@ -79,7 +79,7 @@ export default function App() {
   }, [theme]);
 
   const profile =
-    current || profiles[0] || { id: "none", name: "No profile", address: "http://localhost:8081" };
+    current || profiles[0] || { id: "none", name: "No profile", address: "http://localhost:8082" };
   const derivedProfile = { ...profile, address: targetAddress || profile.address };
 
   const persistAddress = () => {
@@ -263,7 +263,7 @@ export default function App() {
                     setCapabilities(null);
                   }}
                   onBlur={persistAddress}
-                  placeholder="http://localhost:8081"
+                  placeholder="http://localhost:8082"
                 />
                 <button
                   className="primary-btn"

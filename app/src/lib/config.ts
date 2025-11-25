@@ -87,6 +87,6 @@ export function saveEnvSettings(settings: EnvSettings) {
 
 function defaultProfiles(): BackendProfile[] {
   return [
-    { id: "local", name: "Local Dev", address: "http://localhost:8081" }
+    { id: "local", name: "Local Dev", address: "http://localhost:8082" }
   ];
 }
