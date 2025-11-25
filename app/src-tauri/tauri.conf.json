@@ -5,7 +5,7 @@
   "identifier": "com.servicelens.app",
   "build": {
     "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build:backend && npm run build",
+    "beforeBuildCommand": "npm run build",
     "devUrl": "http://localhost:5173",
     "frontendDist": "../dist"
   },
