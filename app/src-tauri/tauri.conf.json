@@ -26,6 +26,9 @@
   "bundle": {
     "active": true,
     "targets": ["dmg", "msi", "nsis"],
+    "externalBin": [
+      "binaries/backend-${TARGET_TRIPLE}"
+    ],
     "resources": []
   }
 }
