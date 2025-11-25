@@ -90,25 +90,30 @@ impl BackendProcess {
                 return Err("Unsupported target OS".into());
             };
             
-            // Look for binary using Tauri's sidecar API (for externalBin)
-            // Tauri automatically appends the target triple to externalBin entries
-            let backend_bin = app
-                .path()
-                .resource_dir()?
-                .join("binaries")
-                .join(&binary_name);
+            // Look for binary - externalBin places binaries directly in resource_dir
+            // When using externalBin: ["binaries/backend"], Tauri looks for "backend-${TARGET_TRIPLE}"
+            // But we're building with full names like "backend-x86_64-apple-darwin"
+            let resource_dir = app.path().resource_dir()?;
+            
+            // Try multiple possible locations:
+            // 1. Directly in resource_dir (externalBin location) - Tauri might rename it
+            // 2. In resource_dir/binaries (if using resources instead)
+            // 3. Direct match with our binary name
+            let mut backend_bin = resource_dir.join(&binary_name);
+            
+            if !backend_bin.exists() {
+                // Try in binaries subdirectory
+                backend_bin = resource_dir.join("binaries").join(&binary_name);
+            }
             
             // Debug: log the paths we're checking
             eprintln!("Looking for backend binary:");
             eprintln!("  Binary name: {}", binary_name);
-            eprintln!("  Full path: {:?}", backend_bin);
+            eprintln!("  Resource dir: {:?}", resource_dir);
+            eprintln!("  Checking path: {:?}", backend_bin);
             eprintln!("  Exists: {}", backend_bin.exists());
             
-            // Also try the sidecar path (Tauri's externalBin location)
-            let resource_dir = app.path().resource_dir()?;
-            eprintln!("  Resource dir: {:?}", resource_dir);
-            
-            // List contents of resource directory
+            // List contents of resource directory for debugging
             if resource_dir.exists() {
                 eprintln!("  Resource directory exists, contents:");
                 if let Ok(entries) = std::fs::read_dir(&resource_dir) {
@@ -127,8 +132,6 @@ impl BackendProcess {
                         eprintln!("    - {:?}", entry.path());
                     }
                 }
-            } else {
-                eprintln!("  Binaries directory does not exist: {:?}", binaries_dir);
             }
             
             if !backend_bin.exists() {
