@@ -58,19 +58,19 @@ impl BackendProcess {
             let use_tls = config.use_tls; // Use config value directly, don't check env var first
             let allow_origins = config.allow_origins.clone();
             
+            // Debug: log the environment variables being set (before moving values)
+            eprintln!("Starting backend (dev mode) with env vars:");
+            eprintln!("  GRPS_BACKEND_ADDR={}", backend_addr);
+            eprintln!("  GRPS_HTTP_ADDR={}", http_addr);
+            eprintln!("  GRPS_BACKEND_USE_TLS={}", if use_tls { "true" } else { "false" });
+            eprintln!("  GRPS_ALLOW_ORIGINS={}", allow_origins);
+            
             cmd.env("GRPS_BACKEND_ADDR", backend_addr);
             cmd.env("GRPS_HTTP_ADDR", http_addr);
             // Set TLS as "true" or "false" string (envBool accepts "true"/"false" strings)
             cmd.env("GRPS_BACKEND_USE_TLS", if use_tls { "true" } else { "false" });
             cmd.env("GRPS_ALLOW_ORIGINS", allow_origins);
             cmd.env("GRPS_AUTO_ALLOW_DEV_ORIGINS", "true");
-            
-            // Debug: log the environment variables being set
-            eprintln!("Starting backend (dev mode) with env vars:");
-            eprintln!("  GRPS_BACKEND_ADDR={}", backend_addr);
-            eprintln!("  GRPS_HTTP_ADDR={}", http_addr);
-            eprintln!("  GRPS_BACKEND_USE_TLS={}", if use_tls { "true" } else { "false" });
-            eprintln!("  GRPS_ALLOW_ORIGINS={}", allow_origins);
             
             let child = cmd.spawn()?;
             self.child = Some(child);
@@ -175,19 +175,19 @@ impl BackendProcess {
             let use_tls = config.use_tls; // Use config value directly, don't check env var first
             let allow_origins = config.allow_origins.clone();
             
+            // Debug: log the environment variables being set (before moving values)
+            eprintln!("Starting backend with env vars:");
+            eprintln!("  GRPS_BACKEND_ADDR={}", backend_addr);
+            eprintln!("  GRPS_HTTP_ADDR={}", http_addr);
+            eprintln!("  GRPS_BACKEND_USE_TLS={}", if use_tls { "true" } else { "false" });
+            eprintln!("  GRPS_ALLOW_ORIGINS={}", allow_origins);
+            
             cmd.env("GRPS_BACKEND_ADDR", backend_addr);
             cmd.env("GRPS_HTTP_ADDR", http_addr);
             // Set TLS as "true" or "false" string (envBool accepts "true"/"false" strings)
             cmd.env("GRPS_BACKEND_USE_TLS", if use_tls { "true" } else { "false" });
             cmd.env("GRPS_ALLOW_ORIGINS", allow_origins);
             cmd.env("GRPS_AUTO_ALLOW_DEV_ORIGINS", "true");
-            
-            // Debug: log the environment variables being set
-            eprintln!("Starting backend with env vars:");
-            eprintln!("  GRPS_BACKEND_ADDR={}", backend_addr);
-            eprintln!("  GRPS_HTTP_ADDR={}", http_addr);
-            eprintln!("  GRPS_BACKEND_USE_TLS={}", if use_tls { "true" } else { "false" });
-            eprintln!("  GRPS_ALLOW_ORIGINS={}", allow_origins);
             
             let child = cmd.spawn()?;
             self.child = Some(child);
