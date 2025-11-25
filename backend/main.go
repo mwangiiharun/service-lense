@@ -149,9 +149,12 @@ func dialBackend(ctx context.Context, cfg Config) (*grpc.ClientConn, error) {
 	// Create insecure credentials - this is the ONLY way to connect
 	creds := insecure.NewCredentials()
 	
+	// Add unique identifier to target to force new connection (prevent connection pooling)
+	// This ensures gRPC doesn't reuse any cached connections
+	uniqueTarget := fmt.Sprintf("%s?nocache=%d", cfg.BackendAddr, time.Now().UnixNano())
+	log.Printf("Using unique target: %s (to prevent connection reuse)", uniqueTarget)
+	
 	// Build dial options - ONLY insecure credentials, nothing else
-	// Add WithDisableRetry to prevent connection reuse
-	// Add WithBlock to ensure connection is established immediately
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(creds),
 		grpc.WithBlock(), // Ensure connection is established
@@ -159,16 +162,13 @@ func dialBackend(ctx context.Context, cfg Config) (*grpc.ClientConn, error) {
 		grpc.WithDisableRetry(), // Disable retries
 	}
 	
-	// DO NOT set ServerName or Authority - these can cause TLS issues
-	
-	log.Printf("Dialing gRPC backend at %s with TLS=FALSE (forced, insecure only)", cfg.BackendAddr)
-	log.Printf("Dial options: WithTransportCredentials(insecure), WithBlock, WithDisableRetry")
+	log.Printf("Dial options: WithTransportCredentials(insecure), WithBlock, WithDisableServiceConfig, WithDisableRetry")
 	
 	// Use a timeout context to prevent hanging
 	dialCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	
-	conn, err := grpc.DialContext(dialCtx, cfg.BackendAddr, opts...)
+	conn, err := grpc.DialContext(dialCtx, uniqueTarget, opts...)
 	if err != nil {
 		log.Printf("ERROR dialing backend: %v", err)
 		log.Printf("ERROR: This should not happen with insecure credentials. Check that %s is a plaintext gRPC server.", cfg.BackendAddr)
