@@ -155,8 +155,12 @@ export function Settings({
             <label className="settings__checkbox">
               <input
                 type="checkbox"
-                checked={envSettings.useTLS}
-                onChange={e => updateEnv({ useTLS: e.target.checked })}
+                checked={envSettings.useTLS ?? false}
+                onChange={e => {
+                  const newValue = e.target.checked;
+                  console.log("TLS checkbox changed to:", newValue);
+                  updateEnv({ useTLS: newValue });
+                }}
               />
               <span>GRPS_BACKEND_USE_TLS</span>
             </label>

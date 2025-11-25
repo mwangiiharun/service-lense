@@ -25,10 +25,19 @@ export async function restartBackend(config: EnvSettings): Promise<void> {
     throw new Error(`GRPS_BACKEND_ADDR cannot be the same as GRPS_HTTP_ADDR. Backend address should point to your gRPC server (e.g., localhost:9090), not the Inspector HTTP server (${config.httpAddr}).`);
   }
   
+  // Ensure useTLS is a boolean (never undefined)
+  const useTLS = config.useTLS ?? false;
+  console.log("Restarting backend with config:", {
+    backend_addr: backendAddr,
+    http_addr: config.httpAddr,
+    use_tls: useTLS,
+    allow_origins: config.allowOrigins,
+  });
+  
   const backendConfig: BackendConfig = {
     backend_addr: backendAddr,
     http_addr: config.httpAddr,
-    use_tls: config.useTLS,
+    use_tls: useTLS,
     allow_origins: config.allowOrigins,
   };
   
