@@ -18,11 +18,31 @@ const REQUESTS_KEY = "servicelens_requests";
 const ENV_SETTINGS_KEY = "servicelens_env_settings";
 
 export function loadProfiles(): BackendProfile[] {
-  if (typeof localStorage === "undefined") return [];
+  if (typeof localStorage === "undefined") return defaultProfiles();
   try {
     const raw = localStorage.getItem(PROFILES_KEY);
     if (!raw) return defaultProfiles();
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    const profiles = Array.isArray(parsed) && parsed.length > 0 ? parsed : defaultProfiles();
+    
+    // Migrate old port addresses to new default (9000)
+    // Update any profiles that still use old ports (8081, 8082) to use 9000
+    const migrated = profiles.map(profile => {
+      if (profile.address && (profile.address.includes(':8081') || profile.address.includes(':8082'))) {
+        return {
+          ...profile,
+          address: profile.address.replace(/:808[12]/, ':9000')
+        };
+      }
+      return profile;
+    });
+    
+    // Save migrated profiles if any were changed
+    if (JSON.stringify(profiles) !== JSON.stringify(migrated)) {
+      saveProfiles(migrated);
+    }
+    
+    return migrated;
   } catch {
     return defaultProfiles();
   }
