@@ -25,10 +25,10 @@ export function loadProfiles(): BackendProfile[] {
     const parsed = JSON.parse(raw);
     const profiles = Array.isArray(parsed) && parsed.length > 0 ? parsed : defaultProfiles();
     
-    // Migrate old port addresses to new default (9000)
-    // Update any profiles that still use old ports (8081, 8082) to use 9000
+    // Migrate old port addresses to new default (8081)
+    // Update any profiles that still use old ports (9000, 8082) to use 8081
     const migrated = profiles.map(profile => {
-      if (profile.address && (profile.address.includes(':8081') || profile.address.includes(':8082'))) {
+      if (profile.address && (profile.address.includes(':9000') || profile.address.includes(':8082'))) {
         return {
           ...profile,
           address: profile.address.replace(/:9000|:8082/, ':8081')
