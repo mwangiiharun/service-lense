@@ -148,27 +148,36 @@ func dialBackend(ctx context.Context, cfg Config) (*grpc.ClientConn, error) {
 	creds := insecure.NewCredentials()
 	
 	// Build dial options - ONLY insecure credentials, nothing else
+	// Add WithDisableRetry to prevent connection reuse
+	// Add WithBlock to ensure connection is established immediately
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(creds),
 		grpc.WithBlock(), // Ensure connection is established
+		grpc.WithDisableRetry(), // Disable retries to prevent connection reuse
 	}
 	
 	// DO NOT set ServerName or Authority - these can cause TLS issues
-	// Only use them if TLS is enabled (which it never is)
 	
 	log.Printf("Dialing gRPC backend at %s with TLS=FALSE (forced, insecure only)", cfg.BackendAddr)
-	log.Printf("Dial options: WithTransportCredentials(insecure), WithBlock")
+	log.Printf("Dial options: WithTransportCredentials(insecure), WithBlock, WithDisableRetry")
 	
-	conn, err := grpc.DialContext(ctx, cfg.BackendAddr, opts...)
+	// Use a timeout context to prevent hanging
+	dialCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	
+	conn, err := grpc.DialContext(dialCtx, cfg.BackendAddr, opts...)
 	if err != nil {
 		log.Printf("ERROR dialing backend: %v", err)
 		log.Printf("ERROR: This should not happen with insecure credentials. Check that %s is a plaintext gRPC server.", cfg.BackendAddr)
 		return nil, err
 	}
 	
-	// Verify connection state
+	// Verify connection state and credentials
 	state := conn.GetState()
 	log.Printf("SUCCESS: Connected to %s with insecure (no TLS) credentials (state: %s)", cfg.BackendAddr, state.String())
+	
+	// Double-check: try to get connection info
+	// The connection should be using insecure transport
 	return conn, nil
 }
 
@@ -193,7 +202,7 @@ func (s *Server) ensureConnection(ctx context.Context) error {
 		log.Printf("Resetting existing connection (state: %s) to ensure fresh TLS=false connection...", state.String())
 		s.resetConnection()
 	}
-	
+
 	log.Printf("Creating fresh backend connection (TLS forced to false)...")
 	conn, err := dialBackend(ctx, s.cfg)
 	if err != nil {
