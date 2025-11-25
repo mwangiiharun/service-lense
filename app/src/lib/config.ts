@@ -89,10 +89,28 @@ export function loadEnvSettings(): EnvSettings {
     const raw = localStorage.getItem(ENV_SETTINGS_KEY);
     if (!raw) return defaultEnvSettings;
     const parsed = JSON.parse(raw);
+    
+    // Normalize and validate settings
+    let backendAddr = (parsed.backendAddr ?? defaultEnvSettings.backendAddr).trim();
+    // Remove http:// or https:// prefix if present
+    backendAddr = backendAddr.replace(/^https?:\/\//, "");
+    // Ensure lowercase
+    backendAddr = backendAddr.toLowerCase();
+    
+    // Ensure useTLS is a boolean (handle string "true"/"false" from old saves)
+    let useTLS = defaultEnvSettings.useTLS;
+    if (parsed.useTLS !== undefined) {
+      if (typeof parsed.useTLS === "boolean") {
+        useTLS = parsed.useTLS;
+      } else if (typeof parsed.useTLS === "string") {
+        useTLS = parsed.useTLS.toLowerCase() === "true";
+      }
+    }
+    
     return {
-      backendAddr: parsed.backendAddr ?? defaultEnvSettings.backendAddr,
+      backendAddr: backendAddr || defaultEnvSettings.backendAddr,
       allowOrigins: parsed.allowOrigins ?? defaultEnvSettings.allowOrigins,
-      useTLS: parsed.useTLS ?? defaultEnvSettings.useTLS,
+      useTLS: useTLS,
       httpAddr: parsed.httpAddr ?? defaultEnvSettings.httpAddr
     };
   } catch {

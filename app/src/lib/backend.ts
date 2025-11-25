@@ -12,8 +12,21 @@ export type BackendConfig = {
  * Restart the Inspector backend with new configuration
  */
 export async function restartBackend(config: EnvSettings): Promise<void> {
+  // Normalize backend address (lowercase, no http:// prefix)
+  let backendAddr = config.backendAddr.trim();
+  // Remove http:// or https:// prefix if present
+  backendAddr = backendAddr.replace(/^https?:\/\//, "");
+  // Ensure lowercase
+  backendAddr = backendAddr.toLowerCase();
+  
+  // Validate that backend address is not the same as HTTP address
+  const httpPort = config.httpAddr.replace(/^:/, "").trim();
+  if (backendAddr.includes(`:${httpPort}`) || backendAddr === `localhost:${httpPort}`) {
+    throw new Error(`GRPS_BACKEND_ADDR cannot be the same as GRPS_HTTP_ADDR. Backend address should point to your gRPC server (e.g., localhost:9090), not the Inspector HTTP server (${config.httpAddr}).`);
+  }
+  
   const backendConfig: BackendConfig = {
-    backend_addr: config.backendAddr,
+    backend_addr: backendAddr,
     http_addr: config.httpAddr,
     use_tls: config.useTLS,
     allow_origins: config.allowOrigins,

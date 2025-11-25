@@ -75,12 +75,24 @@ impl BackendProcess {
         self.stop();
         
         self.config = config.clone();
-        let config = config.unwrap_or_else(|| BackendConfig {
+        let mut config = config.unwrap_or_else(|| BackendConfig {
             backend_addr: "localhost:9090".to_string(),  // Console gRPC server (where inspector backend connects TO)
             http_addr: ":8081".to_string(),  // Inspector backend HTTP server (where UI connects)
             use_tls: false,
             allow_origins: "http://localhost:5173".to_string(),
         });
+        
+        // Normalize backend address: lowercase, no http:// prefix
+        config.backend_addr = config.backend_addr.trim().to_lowercase();
+        config.backend_addr = config.backend_addr.replace("http://", "").replace("https://", "");
+        
+        // Validate that backend address is not the same as HTTP address
+        let http_port = config.http_addr.trim_start_matches(':');
+        if config.backend_addr.contains(&format!(":{}", http_port)) || 
+           config.backend_addr == format!("localhost:{}", http_port) {
+            return Err(format!("GRPS_BACKEND_ADDR ({}) cannot be the same as GRPS_HTTP_ADDR ({}). Backend address should point to your gRPC server (e.g., localhost:9090), not the Inspector HTTP server.", 
+                config.backend_addr, config.http_addr).into());
+        }
         
         // Kill any process already using the HTTP port BEFORE starting
         if let Some(port) = extract_port(&config.http_addr) {
