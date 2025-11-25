@@ -131,7 +131,7 @@ export function Settings({
                 className="settings__input"
                 value={envSettings.backendAddr}
                 onChange={e => updateEnv({ backendAddr: e.target.value })}
-                placeholder="localhost:9090"
+                placeholder="localhost:8081"
               />
             </label>
             <label>
