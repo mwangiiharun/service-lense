@@ -77,6 +77,8 @@ func (s *Server) invokeHandler(w http.ResponseWriter, r *http.Request) {
 			errMsg = "Connection refused: The gRPC backend is not running or the address is incorrect. Please check GRPS_BACKEND_ADDR in Settings."
 		} else if strings.Contains(errMsg, "no such host") {
 			errMsg = "Host not found: The gRPC backend address is invalid. Please check GRPS_BACKEND_ADDR in Settings."
+		} else if strings.Contains(errMsg, "http2") || strings.Contains(errMsg, "HTTP/1.1") || strings.Contains(errMsg, "frame too large") {
+			errMsg = fmt.Sprintf("Protocol mismatch: The address %s appears to be running an HTTP server, not a gRPC server. gRPC requires HTTP/2, but received HTTP/1.1 responses. Please verify GRPS_BACKEND_ADDR is pointing to a gRPC server.", s.cfg.BackendAddr)
 		}
 
 		writeJSON(w, http.StatusBadGateway, InvokeResponse{
