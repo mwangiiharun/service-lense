@@ -60,7 +60,7 @@ const defaultEnvSettings: EnvSettings = {
   backendAddr: "localhost:9090",
   allowOrigins: "http://localhost:5173",
   useTLS: false,
-  httpAddr: ":8082"  // Changed from :8081 to avoid conflict with user's gRPC backend
+  httpAddr: ":9000"  // ServiceLens proxy port (90XX range)
 };
 
 export function loadEnvSettings(): EnvSettings {
@@ -87,6 +87,6 @@ export function saveEnvSettings(settings: EnvSettings) {
 
 function defaultProfiles(): BackendProfile[] {
   return [
-    { id: "local", name: "Local Dev", address: "http://localhost:8082" }
+    { id: "local", name: "Local Dev", address: "http://localhost:9000" }
   ];
 }
