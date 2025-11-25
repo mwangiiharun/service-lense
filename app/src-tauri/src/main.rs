@@ -90,52 +90,50 @@ impl BackendProcess {
                 return Err("Unsupported target OS".into());
             };
             
-            // Look for binary - externalBin places binaries directly in resource_dir
-            // When using externalBin: ["binaries/backend"], Tauri looks for "backend-${TARGET_TRIPLE}"
-            // But we're building with full names like "backend-x86_64-apple-darwin"
-            let resource_dir = app.path().resource_dir()?;
+            // Look for binary - externalBin places binaries in MacOS directory as "backend"
+            // Tauri expects "backend-${TARGET_TRIPLE}" in source, but places it as "backend" in MacOS
+            let app_dir = app.path().app_dir()?;
+            let mut backend_bin = app_dir.join("backend");
             
-            // Try multiple possible locations:
-            // 1. Directly in resource_dir (externalBin location) - Tauri might rename it
-            // 2. In resource_dir/binaries (if using resources instead)
-            // 3. Direct match with our binary name
-            let mut backend_bin = resource_dir.join(&binary_name);
-            
+            // Fallback: try resource_dir locations (for resources or older builds)
             if !backend_bin.exists() {
-                // Try in binaries subdirectory
+                let resource_dir = app.path().resource_dir()?;
                 backend_bin = resource_dir.join("binaries").join(&binary_name);
+                
+                if !backend_bin.exists() {
+                    backend_bin = resource_dir.join(&binary_name);
+                }
             }
             
             // Debug: log the paths we're checking
             eprintln!("Looking for backend binary:");
-            eprintln!("  Binary name: {}", binary_name);
-            eprintln!("  Resource dir: {:?}", resource_dir);
+            eprintln!("  Expected name: {}", binary_name);
+            eprintln!("  App dir: {:?}", app_dir);
             eprintln!("  Checking path: {:?}", backend_bin);
             eprintln!("  Exists: {}", backend_bin.exists());
             
-            // List contents of resource directory for debugging
-            if resource_dir.exists() {
-                eprintln!("  Resource directory exists, contents:");
-                if let Ok(entries) = std::fs::read_dir(&resource_dir) {
-                    for entry in entries.flatten() {
-                        eprintln!("    - {:?}", entry.path());
-                    }
-                }
-            }
-            
-            // List contents of binaries directory if it exists
-            let binaries_dir = resource_dir.join("binaries");
-            if binaries_dir.exists() {
-                eprintln!("  Binaries directory exists, contents:");
-                if let Ok(entries) = std::fs::read_dir(&binaries_dir) {
-                    for entry in entries.flatten() {
-                        eprintln!("    - {:?}", entry.path());
-                    }
-                }
-            }
-            
             if !backend_bin.exists() {
-                return Err(format!("Backend binary not found at: {:?}. Resource dir: {:?}", backend_bin, resource_dir).into());
+                // List possible locations for debugging
+                eprintln!("  App dir contents:");
+                if app_dir.exists() {
+                    if let Ok(entries) = std::fs::read_dir(&app_dir) {
+                        for entry in entries.flatten() {
+                            eprintln!("    - {:?}", entry.path());
+                        }
+                    }
+                }
+                
+                let resource_dir = app.path().resource_dir()?;
+                eprintln!("  Resource dir: {:?}", resource_dir);
+                if resource_dir.exists() {
+                    if let Ok(entries) = std::fs::read_dir(&resource_dir) {
+                        for entry in entries.flatten() {
+                            eprintln!("    - {:?}", entry.path());
+                        }
+                    }
+                }
+                
+                return Err(format!("Backend binary not found at: {:?}", backend_bin).into());
             }
 
             let mut cmd = Command::new(&backend_bin);
