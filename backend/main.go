@@ -143,29 +143,32 @@ func dialBackend(ctx context.Context, cfg Config) (*grpc.ClientConn, error) {
 	// IGNORE cfg.UseTLS completely - always use insecure
 	log.Printf("FORCED: Using insecure (no TLS) credentials for connection to %s", cfg.BackendAddr)
 	log.Printf("FORCED: cfg.UseTLS=%v (IGNORED - always using insecure)", cfg.UseTLS)
+	
+	// Create insecure credentials - this is the ONLY way to connect
 	creds := insecure.NewCredentials()
-
+	
+	// Build dial options - ONLY insecure credentials, nothing else
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(creds),
+		grpc.WithBlock(), // Ensure connection is established
 	}
-	// Remove ServerName authority - not needed for insecure connections
-	// if cfg.ServerName != "" {
-	// 	opts = append(opts, grpc.WithAuthority(cfg.ServerName))
-	// }
-
-	log.Printf("Dialing gRPC backend at %s with TLS=FALSE (forced, insecure only)", cfg.BackendAddr)
 	
-	// Use DialContext with WithBlock to ensure connection is established
-	// This ensures we get a fresh connection every time with TLS=false
-	opts = append(opts, grpc.WithBlock())
+	// DO NOT set ServerName or Authority - these can cause TLS issues
+	// Only use them if TLS is enabled (which it never is)
+	
+	log.Printf("Dialing gRPC backend at %s with TLS=FALSE (forced, insecure only)", cfg.BackendAddr)
+	log.Printf("Dial options: WithTransportCredentials(insecure), WithBlock")
 	
 	conn, err := grpc.DialContext(ctx, cfg.BackendAddr, opts...)
 	if err != nil {
 		log.Printf("ERROR dialing backend: %v", err)
+		log.Printf("ERROR: This should not happen with insecure credentials. Check that %s is a plaintext gRPC server.", cfg.BackendAddr)
 		return nil, err
 	}
 	
-	log.Printf("SUCCESS: Connected to %s with insecure (no TLS) credentials", cfg.BackendAddr)
+	// Verify connection state
+	state := conn.GetState()
+	log.Printf("SUCCESS: Connected to %s with insecure (no TLS) credentials (state: %s)", cfg.BackendAddr, state.String())
 	return conn, nil
 }
 
