@@ -42,10 +42,12 @@ func main() {
 		log.Fatalf("GRPS_BACKEND_ADDR must be configured (set via environment variable or UI settings)")
 	}
 
+	log.Printf("Attempting to connect to gRPC backend at %s (TLS: %v)...", cfg.BackendAddr, cfg.UseTLS)
 	conn, err := dialBackend(context.Background(), cfg)
     if err != nil {
-        log.Fatalf("dial backend: %v", err)
+        log.Fatalf("Failed to dial gRPC backend at %s: %v\n\nMake sure:\n1. The gRPC backend is running\n2. GRPS_BACKEND_ADDR is correct\n3. GRPS_BACKEND_USE_TLS matches the backend's TLS configuration", cfg.BackendAddr, err)
     }
+	log.Printf("Successfully connected to gRPC backend at %s", cfg.BackendAddr)
 
     srv := &Server{
 		cfg:         cfg,
