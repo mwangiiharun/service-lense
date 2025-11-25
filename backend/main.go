@@ -53,10 +53,10 @@ func main() {
 	log.Printf("Attempting to connect to gRPC backend at %s (TLS: FALSE - FORCED)", cfg.BackendAddr)
 	log.Printf("DEBUG: GRPS_BACKEND_USE_TLS env var = %q (ignored, TLS forced to false)", os.Getenv("GRPS_BACKEND_USE_TLS"))
 	log.Printf("DEBUG: UseTLS = %v (FORCED TO FALSE)", cfg.UseTLS)
-	
+
 	// Always create a fresh connection - close any existing one first
 	srv.resetConnection()
-	
+
 	conn, err := dialBackend(context.Background(), cfg)
 	if err != nil {
 		log.Printf("WARNING: Failed to connect to gRPC backend at %s: %v", cfg.BackendAddr, err)
@@ -177,7 +177,7 @@ func (s *Server) ensureConnection(ctx context.Context) error {
 		log.Printf("New backend connection created")
 		return nil
 	}
-	
+
 	// Check connection state
 	state := s.backendConn.GetState()
 	if state.String() == "TRANSIENT_FAILURE" || state.String() == "SHUTDOWN" || state.String() == "CONNECTING" {
@@ -190,7 +190,7 @@ func (s *Server) ensureConnection(ctx context.Context) error {
 		s.backendConn = conn
 		log.Printf("Backend connection recreated")
 	}
-	
+
 	return nil
 }
 
