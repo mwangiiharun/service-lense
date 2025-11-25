@@ -71,6 +71,9 @@ impl BackendProcess {
     }
 
     fn start(&mut self, app: &tauri::AppHandle, config: Option<BackendConfig>) -> Result<(), Box<dyn std::error::Error>> {
+        // Stop any existing backend first
+        self.stop();
+        
         self.config = config.clone();
         let config = config.unwrap_or_else(|| BackendConfig {
             backend_addr: "localhost:8081".to_string(),  // Target gRPC backend to inspect
@@ -78,6 +81,15 @@ impl BackendProcess {
             use_tls: false,
             allow_origins: "http://localhost:5173".to_string(),
         });
+        
+        // Kill any process already using the HTTP port BEFORE starting
+        if let Some(port) = extract_port(&config.http_addr) {
+            eprintln!("Checking for processes on port {}...", port);
+            kill_process_on_port(port);
+            // Give it a moment to release the port
+            std::thread::sleep(std::time::Duration::from_millis(300));
+        }
+        
         if cfg!(debug_assertions) {
             // Development: run `go run` from the backend directory located at repo_root/backend.
             let backend_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -273,17 +285,6 @@ impl BackendProcess {
             // Wait for process to exit
             let _ = child.wait();
             println!("Backend process stopped");
-        }
-        
-        // Also kill any processes using the configured HTTP port (9000 by default)
-        // This handles cases where a previous instance didn't shut down cleanly
-        if let Some(config) = &self.config {
-            if let Some(port) = extract_port(&config.http_addr) {
-                kill_process_on_port(port);
-            }
-        } else {
-            // Default port if no config
-            kill_process_on_port(9000);
         }
     }
 }
