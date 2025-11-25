@@ -84,14 +84,18 @@ func main() {
 		http.NotFound(w, r)
 	})
 
+	// Start gRPC server in a goroutine (non-blocking, non-fatal)
+	// This is used for reflection but the HTTP proxy can work without it
 	go func() {
 		lis, err := net.Listen("tcp", cfg.GRPCAddr)
 		if err != nil {
-			log.Fatalf("listen grpc: %v", err)
+			log.Printf("WARNING: Failed to start gRPC server on %s: %v", cfg.GRPCAddr, err)
+			log.Printf("The HTTP/gRPC-Web proxy will continue to work, but gRPC reflection on this port is unavailable.")
+			return
 		}
 		log.Printf("gRPC server listening on %s\n", cfg.GRPCAddr)
 		if err := srv.grpcServer.Serve(lis); err != nil {
-			log.Fatalf("grpc serve: %v", err)
+			log.Printf("WARNING: gRPC server error: %v (HTTP proxy continues)", err)
 		}
 	}()
 
@@ -104,7 +108,7 @@ func main() {
 func loadConfig() Config {
 	cfg := Config{
 		BackendAddr:  envOr("GRPS_BACKEND_ADDR", "localhost:9090"), // Console gRPC server (where inspector backend connects TO)
-		HTTPAddr:     envOr("GRPS_HTTP_ADDR", ":8081"),            // Inspector backend HTTP server (where UI connects)
+		HTTPAddr:     envOr("GRPS_HTTP_ADDR", ":8081"),             // Inspector backend HTTP server (where UI connects)
 		GRPCAddr:     envOr("GRPS_GRPC_ADDR", ":50052"),
 		ServerName:   os.Getenv("GRPS_BACKEND_SERVER_NAME"),
 		AllowOrigin:  splitCSV(envOr("GRPS_ALLOW_ORIGINS", "*")),
