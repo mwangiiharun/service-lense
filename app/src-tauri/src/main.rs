@@ -76,8 +76,8 @@ impl BackendProcess {
         
         self.config = config.clone();
         let config = config.unwrap_or_else(|| BackendConfig {
-            backend_addr: "localhost:8081".to_string(),  // Target gRPC backend to inspect
-            http_addr: ":9000".to_string(),  // ServiceLens proxy port (90XX range) - where frontend connects
+            backend_addr: "localhost:9090".to_string(),  // Console gRPC server (where inspector backend connects TO)
+            http_addr: ":8081".to_string(),  // Inspector backend HTTP server (where UI connects)
             use_tls: false,
             allow_origins: "http://localhost:5173".to_string(),
         });
@@ -88,6 +88,13 @@ impl BackendProcess {
             kill_process_on_port(port);
             // Give it a moment to release the port
             std::thread::sleep(std::time::Duration::from_millis(300));
+        }
+        
+        // Also kill any process on the default port (8081) if different from configured port
+        if config.http_addr != ":8081" {
+            if let Some(port) = extract_port(":8081") {
+                kill_process_on_port(port);
+            }
         }
         
         if cfg!(debug_assertions) {

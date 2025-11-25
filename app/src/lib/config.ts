@@ -31,7 +31,7 @@ export function loadProfiles(): BackendProfile[] {
       if (profile.address && (profile.address.includes(':8081') || profile.address.includes(':8082'))) {
         return {
           ...profile,
-          address: profile.address.replace(/:808[12]/, ':9000')
+          address: profile.address.replace(/:9000|:8082/, ':8081')
         };
       }
       return profile;
@@ -77,10 +77,10 @@ export type EnvSettings = {
 };
 
 const defaultEnvSettings: EnvSettings = {
-  backendAddr: "localhost:8081",  // Target gRPC backend to inspect (user's backend)
+  backendAddr: "localhost:9090",  // Console gRPC server (where inspector backend connects TO)
   allowOrigins: "http://localhost:5173",
   useTLS: false,
-  httpAddr: ":9000"  // ServiceLens proxy port (90XX range) - where frontend connects
+  httpAddr: ":8081"  // Inspector backend HTTP server (where UI connects)
 };
 
 export function loadEnvSettings(): EnvSettings {

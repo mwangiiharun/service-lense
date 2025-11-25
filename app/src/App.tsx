@@ -79,7 +79,7 @@ export default function App() {
   }, [theme]);
 
   const profile =
-    current || profiles[0] || { id: "none", name: "No profile", address: "http://localhost:9000" };
+    current || profiles[0] || { id: "none", name: "No profile", address: "http://localhost:8081" };
   const derivedProfile = { ...profile, address: targetAddress || profile.address };
 
   const persistAddress = () => {

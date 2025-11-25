@@ -103,8 +103,8 @@ func main() {
 
 func loadConfig() Config {
 	cfg := Config{
-		BackendAddr:  envOr("GRPS_BACKEND_ADDR", ""),   // Must be configured via UI or env var
-		HTTPAddr:     envOr("GRPS_HTTP_ADDR", ":9000"), // ServiceLens proxy port (90XX range)
+		BackendAddr:  envOr("GRPS_BACKEND_ADDR", "localhost:9090"), // Console gRPC server (where inspector backend connects TO)
+		HTTPAddr:     envOr("GRPS_HTTP_ADDR", ":8081"),            // Inspector backend HTTP server (where UI connects)
 		GRPCAddr:     envOr("GRPS_GRPC_ADDR", ":50052"),
 		ServerName:   os.Getenv("GRPS_BACKEND_SERVER_NAME"),
 		AllowOrigin:  splitCSV(envOr("GRPS_ALLOW_ORIGINS", "*")),

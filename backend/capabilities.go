@@ -78,14 +78,14 @@ func (s *Server) capabilitiesHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Backend not connected. Please configure GRPS_BACKEND_ADDR in Settings and restart the backend.", http.StatusServiceUnavailable)
 		return
 	}
-	
+
 	// Check if connection is still valid
 	state := s.backendConn.GetState()
 	if state.String() == "TRANSIENT_FAILURE" || state.String() == "SHUTDOWN" {
 		http.Error(w, fmt.Sprintf("Backend connection is broken (state: %s). The gRPC backend at %s may not be running. Please check GRPS_BACKEND_ADDR in Settings and ensure your gRPC backend is running, then restart the ServiceLens backend.", state.String(), s.cfg.BackendAddr), http.StatusServiceUnavailable)
 		return
 	}
-	
+
 	// Recover from panics to prevent server crashes
 	defer func() {
 		if r := recover(); r != nil {
@@ -93,12 +93,12 @@ func (s *Server) capabilitiesHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 		}
 	}()
-	
+
 	ctx := r.Context()
 	manifest, err := s.buildCapabilityManifest(ctx)
 	if err != nil {
 		log.Printf("ERROR: failed to collect capabilities: %v", err)
-		
+
 		// Provide helpful error messages for common connection issues
 		errMsg := err.Error()
 		if strings.Contains(errMsg, "connection refused") {
@@ -108,7 +108,7 @@ func (s *Server) capabilitiesHandler(w http.ResponseWriter, r *http.Request) {
 		} else if strings.Contains(errMsg, "TLS") || strings.Contains(errMsg, "tls") {
 			errMsg = fmt.Sprintf("TLS error: There's a TLS configuration mismatch. Please check GRPS_BACKEND_USE_TLS in Settings (currently: %v) and ensure it matches your gRPC backend's TLS configuration.", s.cfg.UseTLS)
 		}
-		
+
 		http.Error(w, "failed to collect capabilities: "+errMsg, http.StatusServiceUnavailable)
 		return
 	}
@@ -131,7 +131,7 @@ func (s *Server) buildCapabilityManifest(ctx context.Context) (*CapabilityManife
 		if m.FullName == "" {
 			continue
 		}
-		
+
 		// Generate example payload if we have the method descriptor
 		var examples []map[string]any
 		if m.MethodDesc != nil {
@@ -139,7 +139,7 @@ func (s *Server) buildCapabilityManifest(ctx context.Context) (*CapabilityManife
 				examples = []map[string]any{example}
 			}
 		}
-		
+
 		methodDescriptors = append(methodDescriptors, MethodDescriptor{
 			ID:                m.FullName,
 			DisplayName:       m.Service + "/" + m.Method,
@@ -194,7 +194,7 @@ func (s *Server) buildCapabilityManifest(ctx context.Context) (*CapabilityManife
 // findBinaryFields recursively finds all fields of type BYTES in a message descriptor
 func findBinaryFields(msgDesc *desc.MessageDescriptor) []string {
 	var binaryFields []string
-	
+
 	for _, field := range msgDesc.GetFields() {
 		if field.GetType() == descriptorpb.FieldDescriptorProto_TYPE_BYTES {
 			binaryFields = append(binaryFields, field.GetName())
@@ -210,6 +210,6 @@ func findBinaryFields(msgDesc *desc.MessageDescriptor) []string {
 			}
 		}
 	}
-	
+
 	return binaryFields
 }

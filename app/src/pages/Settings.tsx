@@ -23,7 +23,7 @@ export function Settings({
     const next: BackendProfile = {
       id: Date.now().toString(),
       name: "New Profile",
-      address: "http://localhost:9000"
+      address: "http://localhost:8081"
     };
     const list = [...local, next];
     setLocal(list);
@@ -103,7 +103,7 @@ export function Settings({
                   className="settings__input"
                 value={p.address}
                 onChange={e => updateProfile(idx, { address: e.target.value })}
-                  placeholder="http://localhost:9000"
+                  placeholder="http://localhost:8081"
               />
             </div>
           ))}
@@ -131,7 +131,7 @@ export function Settings({
                 className="settings__input"
                 value={envSettings.backendAddr}
                 onChange={e => updateEnv({ backendAddr: e.target.value })}
-                placeholder="localhost:8081"
+                placeholder="localhost:9090"
               />
             </label>
             <label>
@@ -140,7 +140,7 @@ export function Settings({
                 className="settings__input"
                 value={envSettings.httpAddr}
                 onChange={e => updateEnv({ httpAddr: e.target.value })}
-                placeholder=":9000"
+                placeholder=":8081"
               />
             </label>
             <label>
