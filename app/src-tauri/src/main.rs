@@ -48,8 +48,9 @@ impl BackendProcess {
             let mut cmd = Command::new("go");
             cmd.args(&["run", "."]);
             cmd.current_dir(&backend_dir);
-            cmd.stdout(std::process::Stdio::piped());
-            cmd.stderr(std::process::Stdio::piped());
+            // In dev mode, show backend output in console for debugging
+            cmd.stdout(std::process::Stdio::inherit());
+            cmd.stderr(std::process::Stdio::inherit());
             
             // Use config from UI (if provided) or fall back to environment variables or defaults
             // Priority: config > environment variable > default
@@ -175,8 +176,10 @@ impl BackendProcess {
             eprintln!("  Found backend binary at: {:?}", backend_bin);
 
             let mut cmd = Command::new(&backend_bin);
+            // In production, we can still inherit stderr to see errors in console/logs
+            // stdout can be piped to avoid cluttering, but stderr is important for debugging
             cmd.stdout(std::process::Stdio::piped());
-            cmd.stderr(std::process::Stdio::piped());
+            cmd.stderr(std::process::Stdio::inherit()); // Show backend errors in console
             // Use config from UI (if provided) or fall back to environment variables or defaults
             // Priority: config > environment variable > default
             let backend_addr = config.backend_addr.clone();
